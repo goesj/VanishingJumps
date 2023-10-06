@@ -112,13 +112,11 @@ AgeLabFun_HMD <- function(Type = 1){
 ##### FUNCTION FOR CALCULATION OF Likelihood MATRIX (FOR WAIC/LOOCV)############ 
 LikelihoodMatrixFun <- function(Samples, n,ZMat){
   
-  muPos <- grep("mu",colnames(Samples), 
+  muPos <- grep("mu[",colnames(Samples), 
                 fixed = TRUE)
   
   sdPos <-grep("sigma_eps", colnames(Samples), 
                  fixed = TRUE) 
-
-  muPosReal <- muPos[1:(length(muPos)-1)] #without muY
   
   LikeMat <- matrix(0,
                     nrow = nrow(Samples),
@@ -127,7 +125,7 @@ LikelihoodMatrixFun <- function(Samples, n,ZMat){
   ZMatVec <- as.vector(ZMat)
   for(s in 1:nrow(Samples)){
       LikeMat[s,] <- dnorm(ZMatVec, 
-                           mean = as.numeric(Samples[s,muPosReal]),
+                           mean = as.numeric(Samples[s,muPos]),
                            sd = Samples[s, sdPos])
     } 
   
