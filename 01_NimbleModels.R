@@ -113,11 +113,11 @@ OwnModel <- nimbleCode({
   a ~ dbeta(shape1 = 1, shape2 = 5) # low values are preferred 
   
   # Age Effects
-  alphaJump[1:N_AgeGroups] <- c(rep(1,3),5,5,5,5,rep(1,3))
+  #alphaJump[1:N_AgeGroups] <- c(rep(1,3),5,5,5,1,rep(1,3))
   for(x in 1:N_AgeGroups){
     b1[x]~ dgamma(shape = 1, rate = 1)
-    #b2[x]~ dgamma(shape = 1, rate = 1)
-    b2[x]~ dgamma(shape = alphaJump[x], rate = 1)
+    b2[x]~ dgamma(shape = 1, rate = 1)
+    #b2[x]~ dgamma(shape = alphaJump[x], rate = 1)
   }
   
   # Dirichlet Distribution is standardized Gamma Dist
