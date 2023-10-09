@@ -1,4 +1,4 @@
-### Visualisation of Results ##############
+### Visualisation  ##############
 library(nimble);library(tidyverse);library(ggdist); library(gghighlight);
 library(cowplot)
 
@@ -45,7 +45,8 @@ SampleDensPlot <- function(Samples, Parameter = p){
       #Attention: Factor level is turned around, so that last factor (Italy) is on top
       mutate("Country" = factor(Country, 
                                 levels = c("United States","Spain","Italy"))) %>% 
-      ggplot(aes(x = a, y = Country))+    #change here parameter to sample
+      ggplot(aes(x = .data[[Parameter]],   #select parameter for x 
+                         y = Country))+    #change here parameter to sample
       ggdist::stat_slabinterval(aes(fill_ramp=after_stat(level),
                                     fill=Country,color=Country),
                                 geom="slabinterval",
@@ -77,7 +78,6 @@ SampleDensPlot <- function(Samples, Parameter = p){
 SampleDensPlot(Samples = SamplesTotal, Parameter =  "p")
 
 
-
 ########## 1.3. Jump Visualisation #############################################
 #Plot for Visualisation of Jump Occurence
 SamplesTotal %>% 
@@ -89,7 +89,8 @@ SamplesTotal %>%
   pivot_longer(., cols = 2:ncol(.), names_to="Time", values_to = "PostMean") %>% 
   mutate(TimeFac = factor(Time, levels = unique(Time), ordered = TRUE)) %>% 
   ggplot(aes(x=TimeFac, group = Country, col = Country))+
-  geom_segment(aes(x = TimeFac, xend = TimeFac, y = 0, yend = PostMean), linewidth = 1.8)+
+  geom_segment(aes(x = TimeFac, xend = TimeFac, y = 0, yend = PostMean), 
+               linewidth = 1.8)+
   geom_point(aes(y = PostMean), size = 3, pch = 18)+
   facet_wrap(~Country, ncol = 1)+
   scale_color_manual(values=c("#81A88D","#c9b045","#98579B"))+
@@ -430,14 +431,14 @@ OtherParamPlotIt <-
 cowplot::plot_grid(BetaParamIt, OtherParamPlotIt, byrow = FALSE, nrow = 2,
                    rel_heights = c(1.4,1)) #making first plot 1.4 times as high
 
-##### 2. Visualization UK WAR DATA ###############################################
+#### 2. Visualization UK WAR DATA ###############################################
 load(file = file.path(getwd(),"Results/Samples_UKWar.RData"))
 
 #Total Samples
 SamplesLiuLi_Tot <- do.call(rbind, 
                             SamplesLiuLi_OC_War) 
 
-######### 2.1 Comparison Liu-Li Freq vs. Liu-Li Bayesian estimates ############
+######### 2.1 Comparison Liu-Li Freq vs. Liu-Li Bayesian estimates #############
 #Parameters to visualizse
 Params <- c("beta","betaJump","muY","sdY","p",
             "drift","sigma_time","sigma_eps")
@@ -482,7 +483,7 @@ SamplesLiuLi_Tot_Long <- SamplesLiuLi_Tot %>%
   pivot_longer(cols = 1:ncol(.), names_to = "Param", values_to = "Val")
                
   
-### Beta Parametsr with geom Ribbon ####
+####  Beta Parameter with geom Ribbon 
 BetaParamPlotRibbon <- SamplesLiuLi_Tot_Long %>% 
   filter(grepl("beta",Param)) %>% 
   mutate("AgeGroup"=rep(AgeGroupVec,2*nrow(SamplesLiuLi_Tot)),#Create Age Group Variable
@@ -556,8 +557,8 @@ cowplot::plot_grid(BetaParamPlotRibbon, OtherParamPlot, byrow = FALSE, nrow = 2,
                    rel_heights = c(1.4,1)) #making first plot 1.4 times as high
 
 
-######### 1.6.2. Jump Occurence WAR ############################################
-#Circular Plot for Jump occurence ##########
+######## 2.2. Jump Occurence WAR ############################################
+# Circular Plot for Jump occurence 
 #Code taken from R graph gallery
 DataCircle <- SamplesLiuLi_Tot %>% 
   data.frame() %>% 
@@ -591,9 +592,10 @@ DataCircle <- DataCircle %>%
   mutate("PostMean"=PostMean+Constant) %>% 
   mutate("Jump"=ifelse(PostMean>0.5+Constant,"yes","no"))
 
-#Remove every other year
-DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),1914:1919,seq(1921,1939,2),1940:1945,seq(1947,2010,2))] <- NA
-
+#Remove every other year. To better dead the axis labels
+DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),
+                                        1914:1919,seq(1921,1939,2),
+                                        1940:1945,seq(1947,2010,2))] <- NA
   ggplot(DataCircle, aes(x=id, y=PostMean)) +  
   geom_bar(aes(fill ="UK"),stat="identity",position = "dodge", width = 0.5)+
   scale_fill_manual(name="", values="#08519c")+
@@ -622,4 +624,217 @@ DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),1914:1919,seq(1921,1939
                                  hjust=hjust), 
             color="black", fontface="bold",alpha=0.7, size=6, 
             angle= DataCircle$angle, inherit.aes = FALSE)
-dev.off()
+
+  
+# 3. Visualization of Percentage Increase ######################################
+
+#First load forecasts of own Model   
+load(file = file.path(getwd(),"Results/SamplesSp_NoRep.RData")) # own Model
+load(file = file.path(getwd(),"Results/SamplesUS_NoRep.RData")) # own Model
+load(file = file.path(getwd(),"Results/SamplesIt_NoRep_2.RData")) # own Model
+ 
+#Function to generate Forecasts as well as return future Jt's 
+FutureZ_Param <- function(Samples,S ,H ,OwnMod = TRUE,NAge,){
+    
+    # @H: Forecast of H time periods ahead
+    # @S: Amount of draws from the posterior
+    # @NAge: Amount of age groups in the data
+    # @Samples: Posterior Samples from nimble
+    # @OwnMod: Binary Variable to choose either Liu,Li or Own model
+    
+    #Get Random indicies from posterior. All should have the same draw 
+    PostDraw <- sample(1:nrow(Samples), 
+                       size = S, 
+                       replace = TRUE)
+    
+    #1) Generation of future kt's
+    driftVec <- Samples[PostDraw, #Select S posterior draws
+                        grep("drift",colnames(Samples))] #extract drift
+    
+    sigmaTime <- Samples[PostDraw,
+                         grep("sigma_time",colnames(Samples))]
+    
+    # generation of future kt's, for each posterior draw, generate H future kt's
+    #Row's are posterior draws, columns are time periods
+    FutureKtMat <- sapply(1:H, function(x){
+      rnorm(n = S, mean = driftVec, sd = sigmaTime)})
+    
+    #2) Generation of future Jt's (be very careful about indices..)
+      
+    #2.1) First Generation of future N'ts
+      # Note that Z1 = J2 - J1, thus ZT = JT+1 - JT, hence we have T+1 J's and N's
+      pVec <- Samples[PostDraw, #Select S posterior draws
+                      grep(paste0("\\<","p"), #starts with p to select "p" only 
+                           colnames(Samples))] 
+      
+    #Row's are posterior draws, columns are time periods,
+    #for each posterior draw, generate new N'ts
+      FutureNtMat <- sapply(1:H, function(x)rbinom(n = S,size = 1, prob = pVec))
+      
+    #Generation of R Matrix 
+      NtMatrix <- Samples[PostDraw, #Select S posterior draws
+                          grep(paste0("\\<","N"), #starts with N to select "N_t" only 
+                               colnames(Samples))] 
+      
+      
+    #Total N't Matrix (observed and future values of N_t)
+      NtTotMat <- cbind(NtMatrix,FutureNtMat)
+      
+    #2.2) Generate new Values of J't
+      muYVec <- Samples[PostDraw, #Select S posterior draws
+                        grep(paste0("\\<","muY"), #select muY 
+                             colnames(Samples))]
+      sdYVec <- Samples[PostDraw, #Select S posterior draws
+                        grep(paste0("\\<","sdY"), #select sdY 
+                             colnames(Samples))]
+      if(OwnMod != TRUE){
+        aVec <- numeric(S) #aVec filled with zeros
+      } else {
+        aVec <- Samples[PostDraw, #Select S posterior draws
+                        grep(paste0("\\<","a"), #starts with a to select "a" only 
+                             colnames(Samples))]
+      }
+      
+    #Creation of mean and sd of future J's
+    #one more column, since Zx,T = JT+1 - JT. Thus first column is JT, second JT+1 and so on
+    #First column is last "observed" JT
+      JtMat <- Samples[PostDraw, #Select S posterior draws
+                       grep(paste0("\\<","J"), #starts with N to select "N_t" only 
+                            colnames(Samples))]
+      
+      
+      FutureYt <- sapply(1:H, function(x){ 
+        rnorm(n = S, mean = muYVec, sd = sdYVec)})
+      
+      FutureJt <- matrix(data = 0,nrow = S,ncol = H+1) #one column more
+      FutureJt[,1] <- JtMat[,ncol(JtMat)]
+      
+      for(j in 2:(H+1)){ #Var(Jt)=Rt*N*sigma*N*Rt
+        h <- j-1  
+        FutureJt[,j] <- aVec*FutureJt[,j-1]+FutureNtMat[,h]*FutureYt[,h]
+      }
+      
+    #3.) Plug all together to generate new Zx,t+h
+      betaMat <- Samples[PostDraw, #Select S posterior draws
+                         grep("beta", #starts with p to select "p" only 
+                              colnames(Samples))][,1:NAge]
+      
+      betaJumpMat <- Samples[PostDraw, #Select S posterior draws
+                             grep(paste0("\\<","betaJump"), #starts with p to select "p" only 
+                                  colnames(Samples))]
+      
+      sigma_epsVec <- Samples[PostDraw, #Select S posterior draws
+                              grep(paste0("\\<","sigma_eps"), #starts with p to select "p" only 
+                                   colnames(Samples))]
+      
+      FutureZArray <- array(data = 0,dim = c(NAge,H,S),
+                            dimnames = list("Age"=1:NAge, "Time"=1:H, "It"=1:S))
+      
+      for(s in 1:S){
+        #via Matrix multiplication (outer product)
+        FutureZArray[,,s] <- 
+          betaMat[s,]%*%t(FutureKtMat[s,])+ #Normal effect
+          betaJumpMat[s,]%*%t(FutureJt[s,2:(H+1)]) - #JT+1
+          betaJumpMat[s,]%*%t(FutureJt[s,1:H]) +#JT
+          sapply(1:H, function(x){rnorm(n = NAge, 
+                                        mean = 0, sd = sigma_epsVec[s])}) #error Term
+      }
+      
+    # Next to forecasts, also return future Jt's and betaJumps
+    ReturnList <- list("Rates"=FutureZArray,
+                       "Jt"=FutureJt,
+                       "betaJump"=betaJumpMat)
+    return(ReturnList)
+}
+  
+### Calculate Future Mort Improvement Rates incl. Parameters
+S <- 10000
+H <- 50
+
+FutureZSp <- FutureZ_Param(H=H, OwnMod = TRUE, 
+                           Samples = do.call("rbind", SamplesOwn_Sp), 
+                           S=S,NAge = 10)
+  
+FutureZUS <- FutureZ_Param(H=H, OwnMod = TRUE, 
+                           Samples = do.call("rbind", SamplesOwn_US_NoRepara),
+                           S=S,NAge = 10)
+  
+FutureZIt <- FutureZ_Param(H=H, OwnMod = TRUE, 
+                           Samples = do.call("rbind", SamplesOwn_It), 
+                           S=S,NAge = 10)
+  
+#Create list of all future Forecasts
+FutureZList <- list(FutureZSp,
+                      FutureZUS,
+                      FutureZIt)
+
+#Create future values of c (see paper)
+JumpEffectArray <- array(0, dim=c(10, H+1, S,3),
+                           dimnames = list("Age"=1:10,
+                                           "FC"=1:(H+1),
+                                           "It"=1:S,
+                                           "Country"=c("b) Spain","c) US","a) Italy")))
+for (c in 1:3) { #over countries
+  for (s in 1:S) { #over Iterations
+    for(x in 1:10){ #over Age
+      JumpEffectArray[x,,s,c] <- FutureZList[[c]]$betaJump[s,x]*FutureZList[[c]]$Jt[s,]  
+    }
+  }
+}
+
+#Transform big Array into long format
+JumpEffectQuant <- 
+    reshape2::melt(JumpEffectArray, value.name = "logEffect") %>% 
+    mutate(AgeGroup = factor(Age,   #Change type Variable to Factor
+                             levels = 1:10,
+                             labels = c(paste0(paste0(seq(0,80,10),sep="-"),
+                                               seq(9,89,10)),"90+"))) %>% 
+    group_by(FC,AgeGroup,Country) %>% 
+    ggdist::point_interval(logEffect, .width = c(0.9,0.95,0.99))
+  
+
+#Calculate the actual, observed Covid Increase
+CovidIncrease <- bind_rows(mutate(LambdaVecSp, Country="b) Spain"),
+                           mutate(LambdaVecUs, Country="c) US"),
+                           mutate(LambdaVecIt, Country="a) Italy")) %>% 
+  group_by(NewAgeInd,Country) %>% 
+  filter(Year %in% c(2019,2020)) %>% 
+  reframe("PercentageIncrease"=exp(diff(log(Rate)))) %>%  #calculation of mortality rate increase between 2019 and 2020
+  mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
+                           levels = 1:10,
+                           labels = c(paste0(paste0(seq(0,80,10),sep="-"),
+                                             seq(9,89,10)),"90+")),
+         CovidIncrease=" ")#Empty column so it can appear in legend
+
+#Plot the Results
+JumpEffectQuant %>% 
+  group_by(AgeGroup,.width,Country) %>% 
+  summarise("Perc"=mean(.upper)) %>%
+  ggplot(aes(x=AgeGroup))+
+  geom_line(aes(y =(exp(Perc)-1)*100, group=.width, col=factor(.width),
+                #linetype = factor(.width)
+  ),
+  linewidth = 1.2)+
+  geom_line(data = CovidIncrease, aes(x =AgeGroup, 
+                                      y=(PercentageIncrease-1)*100,
+                                      group=Country, linewidth = "Covid Increase",
+                                      linetype = "Covid Increase"))+
+  scale_linetype_manual(values = 2, #set linetype of Covid Increase 
+                        name ="Type")+
+  scale_linewidth_manual(values = 1.2, # set line width of Covid Increase
+                         guide = "none")+ #remove from legend
+  scale_color_manual(values = c("#9a031e","#e36414","#023047"))+
+  facet_wrap(~Country, nrow = 3, scales="free")+
+  ylab("Percentage Increase")+
+  xlab("Age Group")+
+  labs(col="Prediction Interval")+
+  theme(
+    axis.text = element_text(size = 20), #change size of axis text
+    axis.title = element_text(size = 22),
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 20),
+    legend.position = "bottom",
+    legend.key.width = unit(1.7,"cm"),
+    strip.text.x=element_text(face="bold", size = 22)
+  )+
+  guides(linetype = guide_legend(override.aes = list(linewidth = 1.3)))
