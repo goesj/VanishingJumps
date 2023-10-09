@@ -38,17 +38,17 @@ LiuLi_Model <- nimbleCode({
     J[t] <- N_t[t]*Y_t[t]
   }
   
-  p ~ dbeta(shape=1, shape2 = 20)
+  p ~ dbeta(shape=1, shape2 = 25)
   muY ~ T(dnorm(mean=0, sd=5), min = 0, max = 1000) #truncated normal
   sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = 1000) #truncated normal
   
   #Prior on Age Effects
   #Dirichlet as Normalized Gamma
-  alphaJump[1:N_AgeGroups] <- c(rep(1,3),3,3,3,3,rep(1,3))
+  #alphaJump[1:N_AgeGroups] <- c(rep(1,3),5,5,5,5,rep(1,3))
   for(x in 1:N_AgeGroups){
     b1[x]~ dgamma(shape = 1, rate = 1)
-    b2[x]~ dgamma(shape = alphaJump[x], rate = 1)
-    #b2[x]~ dgamma(shape = 1, rate = 1)
+    #b2[x]~ dgamma(shape = alphaJump[x], rate = 1)
+    b2[x]~ dgamma(shape = 1, rate = 1)
   }
   
   # Dirichlet Distribution is standardized Gamma Dist
@@ -104,7 +104,7 @@ OwnModel <- nimbleCode({
   }
 
   #low values are preferred
-  p ~ dbeta(shape=1, shape2 = 20)
+  p ~ dbeta(shape=1, shape2 = 25)
   
   muY ~ T(dnorm(mean=1, sd=2), min = 0, max = ) #truncated normal
   sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = ) #truncated normal
@@ -113,7 +113,7 @@ OwnModel <- nimbleCode({
   a ~ dbeta(shape1 = 1, shape2 = 5) # low values are preferred 
   
   # Age Effects
-  #alphaJump[1:N_AgeGroups] <- c(rep(1,3),5,5,5,1,rep(1,3))
+  #alphaJump[1:N_AgeGroups] <- c(rep(1,3),5,5,5,5,rep(1,3))
   for(x in 1:N_AgeGroups){
     b1[x]~ dgamma(shape = 1, rate = 1)
     b2[x]~ dgamma(shape = 1, rate = 1)
