@@ -1,5 +1,5 @@
 ## Load necessary files and libraries ###
-library(nimble);library(tidyverse); library(rstan)
+library(nimble);library(tidyverse); library(rstan);library(loo)
 
 source("01_NimbleModels.R")
 source("02_Functions.R") #needs rstan
@@ -176,12 +176,12 @@ WAICOwnUK <- loo::waic(log(LikeMatOwn_UK))
 WAICLiuUK <- loo::waic(log(LikeMatLiuLi_UK))
 
 LOOOwnUK <- loo::loo(log(LikeMatOwn_UK))
-LOOLiuUKr <- loo::loo(log(LikeMatLiuLi_UK)) # loo IC = -2 elpd_loo
+LOOLiuUK <- loo::loo(log(LikeMatLiuLi_UK)) # loo IC = -2 elpd_loo
 
 
 CompDataFrameWar <- data.frame("Model"=c("Own","Liu-Li"),
                               "LOOCV"= c(LOOOwnUK$estimates[3,1],
-                                         LOOLiuUKr$estimates[3,1]),
+                                         LOOLiuUK$estimates[3,1]),
                               "WAIC"=c(WAICOwnUK$estimates[3,1],
                                        WAICLiuUK$estimates[3,1]))
 
