@@ -128,7 +128,8 @@ OwnModel <- nimbleCode({
   betaJump[N_AgeGroups] <- 1 - sum(betaJump[1:(N_AgeGroups-1)])
   
   
-  sigma_eps ~ T(dnorm(mean=0, sd=1), min = 0, max = ) #truncated normal
+  sigma_eps ~ T(dnorm(mean=0, sd=2), min = 0, max = ) #truncated normal
+  
   #Putting all Parameters together
   for(x in 1:N_AgeGroups){
     for(t in 1:N_Year){
