@@ -1,12 +1,12 @@
 # VanishingJumps
-Code for Paper of pandemic jump modelling
-
+Code for Paper "Bayesian mortality modelling with pandemics: a vanishing jump approach" by Julius Goes, Karim Barigou and Anne Leucht. 
+ 
 ## Models 
 Own, as well as a Bayesian implementation of the Liu,Li(2015) models can be found `01_NimbleModels.R`
 The models are fitted using **nimble** 
 
 ## Data 
-Within the `Data` folder the following can be found: Deaths and Population data by Age, and time for multiple countries. The data was downloaded from both the Human Mortality Database (HMD) ((https://www.mortality.org/)) as well as Eurostat (https://ec.europa.eu/eurostat/data/database). 
+Within the `Data` folder the following can be found: Deaths and Population data by Age, and time for multiple countries. The data was downloaded from both the Human Mortality Database (HMD) (https://www.mortality.org/) as well as Eurostat (https://ec.europa.eu/eurostat/data/database). 
 
 ## Results
 Within the `Results` folder the following can be found: 
@@ -18,7 +18,7 @@ There are multiple R files each requiring different packages to run.
 
 * `01_NimbleModels.R` Includes all self-written models that were used for the analysis.
 * `02_Functions.R` Helper script that loads multiple self-written functions needed for either of the R scripts. 
-* `03_LoadingData.R` Script whichs loads the data into R, transforms it into long format as well as calculates mortality improvement rates for each country. Finished data for analysis is then saved as *CovidData.RData* and *UKWARData.RData*. Both can be found in the `Data` folder.
+* `03_LoadingData.R` Script whichs loads the data into R, transforms it into long format as well as calculates mortality improvement rates for each country. Cleaned data for analysis is then saved as **CovidData.RData** and **UKWARData.RData** respectively. Both can be found in the `Data` folder.
 * `04_UKWarEstimation.R` Code for the analysis of the England and Wales data including calculation of WAIC and LOO-CV. Results of the analysis was saved within the `Results` folder.
 * `05_EstimationCovidJumps.R` Code for the analysis of data during the COVID pandemic for the US, Spain and Italy including calculation of WAIC and LOO-CV. Results of the analysis was saved within the `Results` folder.
 * `06_VisualisationOfParameters` Code for recreation of all plots within the paper. 
