@@ -1,5 +1,5 @@
 ## Estimation of Own and Liu,Li Model Covid Jumps #############################
-library(nimble);library(tidyverse); library(nimbleHMC);library(pacman)
+library(nimble);library(tidyverse); library(loo);library(rstan)
 
 source("01_NimbleModels.R")
 source("02_Functions.R") #loading stan 
