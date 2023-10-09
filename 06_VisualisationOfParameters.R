@@ -75,7 +75,7 @@ SampleDensPlot <- function(Samples, Parameter = p){
 
 
 #Create plot select one of a, p, muY, and sdY for Parameter
-SampleDensPlot(Samples = SamplesTotal, Parameter =  "p")
+SampleDensPlot(Samples = SamplesTotal, Parameter =  "muY")
 
 
 ########## 1.3. Jump Visualisation #############################################
@@ -110,7 +110,7 @@ SamplesTotal %>%
 
 #Plot to create the age pattern of Mortality Jump for all three Countries
 #https://r-graph-gallery.com/web-line-chart-small-multiple-all-group-greyed-out.html
-font <- "serif"
+#font <- "serif"
 
 SamplesTotal %>% 
   select_if(grepl(paste0(c("Country","betaJump"), collapse="|"), names(.))) %>% 
@@ -120,8 +120,8 @@ SamplesTotal %>%
   mutate(BetaVal = fct_inorder(as.factor(BetaVal),ordered = NA)) %>% 
   group_by(Country,BetaVal) %>%  #group by
   reframe(mean = mean(Val),
-          PIL = quantile(Val, probs=0.25),
-          PIU = quantile(Val, probs=0.75)) %>% 
+          PIL = quantile(Val, probs=0.1),
+          PIU = quantile(Val, probs=0.9)) %>% 
   ggplot(aes(x = BetaVal, group = Country)) +
   geom_line(aes(y =mean, col=Country), linewidth = 0.75)+
   geom_ribbon(aes(ymin = PIL, ymax = PIU, fill = Country), alpha = 0.3)+
@@ -303,9 +303,9 @@ OtherParamPlotSp <-
                                    expression(p), expression(sigma[xi]),
                                    expression(" d "),expression(sigma[r])))) %>% 
   # # add y min a y max by group 
-  mutate("ymin"=rep(c(rep(0.25,2),rep(0,2),rep(0.15,1), 
-                      rep(-0.4,1),rep(0.025,1)),nrow(SamplesUSSingle)),
-         "ymax"=rep(c(rep(2.25,2),rep(0.5,2),rep(0.45,1), 
+  mutate("ymin"=rep(c(rep(0.25,2),rep(0,2),rep(0.2,1), 
+                      rep(-0.4,1),rep(0.03,1)),nrow(SamplesUSSingle)),
+         "ymax"=rep(c(rep(2.25,2),rep(0.5,2),rep(0.4,1), 
                       rep(-0.1,1),rep(0.04,1)),nrow(SamplesUSSingle))) %>%
   ggplot(aes(y = Val, x = Param, group = Type))+
   ggdist::stat_slabinterval(
@@ -399,7 +399,7 @@ OtherParamPlotIt <-
                                    expression(p), expression(sigma[xi]),
                                    expression(" d "),expression(sigma[r])))) %>% 
   mutate("ymin"=rep(c(rep(0,2),rep(0,2),rep(0.15,1), 
-                      rep(-0.2,1),rep(0.0275,1)),nrow(SamplesUSSingle)),
+                      rep(-0.3,1),rep(0.0275,1)),nrow(SamplesUSSingle)),
          "ymax"=rep(c(rep(0.75,2),rep(0.35,2),rep(0.35,1), 
                       rep(-0.1,1),rep(0.035,1)),nrow(SamplesUSSingle))) %>%
   ggplot(aes(y = Val, x = Param, group = Type))+
@@ -436,7 +436,7 @@ load(file = file.path(getwd(),"Results/Samples_UKWar.RData"))
 
 #Total Samples
 SamplesLiuLi_Tot <- do.call(rbind, 
-                            SamplesLiuLi_OC_War) 
+                            SamplesLiuLi_War) 
 
 ######### 2.1 Comparison Liu-Li Freq vs. Liu-Li Bayesian estimates #############
 #Parameters to visualizse
@@ -629,12 +629,12 @@ DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),
 # 3. Visualization of Percentage Increase ######################################
 
 #First load forecasts of own Model   
-load(file = file.path(getwd(),"Results/SamplesSp_NoRep.RData")) # own Model
-load(file = file.path(getwd(),"Results/SamplesUS_NoRep.RData")) # own Model
-load(file = file.path(getwd(),"Results/SamplesIt_NoRep_2.RData")) # own Model
+load(file = file.path(getwd(),"Results/SamplesSp.RData")) # own Model
+load(file = file.path(getwd(),"Results/SamplesUS.RData")) # own Model
+load(file = file.path(getwd(),"Results/SamplesIt.RData")) # own Model
  
 #Function to generate Forecasts as well as return future Jt's 
-FutureZ_Param <- function(Samples,S ,H ,OwnMod = TRUE,NAge,){
+FutureZ_Param <- function(Samples,S ,H ,OwnMod = TRUE,NAge){
     
     # @H: Forecast of H time periods ahead
     # @S: Amount of draws from the posterior
@@ -756,7 +756,7 @@ FutureZSp <- FutureZ_Param(H=H, OwnMod = TRUE,
                            S=S,NAge = 10)
   
 FutureZUS <- FutureZ_Param(H=H, OwnMod = TRUE, 
-                           Samples = do.call("rbind", SamplesOwn_US_NoRepara),
+                           Samples = do.call("rbind", SamplesOwn_US),
                            S=S,NAge = 10)
   
 FutureZIt <- FutureZ_Param(H=H, OwnMod = TRUE, 
