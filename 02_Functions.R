@@ -131,3 +131,113 @@ LikelihoodMatrixFun <- function(Samples, n,ZMat){
   
   return(LikeMat)
 }
+
+######### FUNCTION TO CREATE FORECASTS FROM MORTALITY IMPROVEMENTRATES #########
+FutureZ <- function(Samples,S ,H ,OwnMod = TRUE,NAge){
+  
+  # @H: Forecast of H time periods ahead
+  # @S: Amount of draws from the posterior
+  # @NAge: Amount of age groups in the data
+  # @Samples: Posterior Samples from nimble
+  # @OwnMod: Binary Variable to choose either Liu,Li or Own model
+  
+  #Get Random indicies from posterior. All should have the same draw 
+  PostDraw <- sample(1:nrow(Samples), 
+                     size = S, 
+                     replace = FALSE)
+  
+  #1) Generation of future kt's
+  driftVec <- Samples[PostDraw, #Select S posterior draws
+                      grep("drift",colnames(Samples))] #extract drift
+  
+  sigmaTime <- Samples[PostDraw,
+                       grep("sigma_time",colnames(Samples))]
+  
+  # generation of future kt's, for each posterior draw, generate H future kt's
+  #Row's are posterior draws, columns are time periods
+  FutureKtMat <- sapply(1:H, function(x){
+    rnorm(n = S, mean = driftVec, sd = sigmaTime)})
+  
+    #2) Generation of future Jt's 
+    
+    #2.1) First Generation of future N'ts
+    # Note that Z1 = J2 - J1, thus ZT = JT+1 - JT, hence we have T+1 J's and N's
+    pVec <- Samples[PostDraw, #Select S posterior draws
+                    grep(paste0("\\<","p"), #starts with p to select "p" only 
+                         colnames(Samples))] 
+    
+    #Row's are posterior draws, columns are time periods,
+    #for each posterior draw, generate new N'ts
+    FutureNtMat <- sapply(1:H, function(x)rbinom(n = S,size = 1, prob = pVec))
+    
+    #Generation of R Matrix 
+    NtMatrix <- Samples[PostDraw, #Select S posterior draws
+                        grep(paste0("\\<","N"), #starts with N to select "N_t" only 
+                             colnames(Samples))] 
+    
+    
+    #Total N't Matrix (observed and future values of N_t)
+    NtTotMat <- cbind(NtMatrix,FutureNtMat)
+    
+    #2.2) Generate new Values of J't
+    muYVec <- Samples[PostDraw, #Select S posterior draws
+                      grep(paste0("\\<","muY"), #select muY 
+                           colnames(Samples))]
+    sdYVec <- Samples[PostDraw, #Select S posterior draws
+                      grep(paste0("\\<","sdY"), #select sdY 
+                           colnames(Samples))]
+    if(OwnMod != TRUE){
+      aVec <- numeric(S) #aVec filled with zeros
+    } else {
+      aVec <- Samples[PostDraw, #Select S posterior draws
+                      grep(paste0("\\<","a"), #starts with a to select "a" only 
+                           colnames(Samples))]
+    }
+    
+    #Creation of mean and sd of future J's
+    #one more column, since Zx,T = JT+1 - JT. Thus first column is JT, second JT+1 and so on
+    #First column is last "observed" JT
+    JtMat <- Samples[PostDraw, #Select S posterior draws
+                     grep(paste0("\\<","J"), #starts with N to select "N_t" only 
+                          colnames(Samples))]
+    
+    
+    FutureYt <- sapply(1:H, function(x){ 
+      rnorm(n = S, mean = muYVec, sd = sdYVec)})
+    
+    FutureJt <- matrix(data = 0,nrow = S,ncol = H+1) #one column more
+    FutureJt[,1] <- JtMat[,ncol(JtMat)]
+    
+    for(j in 2:(H+1)){ #Var(Jt)=Rt*N*sigma*N*Rt
+      h <- j-1  
+      FutureJt[,j] <- aVec*FutureJt[,j-1]+FutureNtMat[,h]*FutureYt[,h]
+    }
+    
+    #3.) Plug all together to generate new Zx,t+h
+    betaMat <- Samples[PostDraw, #Select S posterior draws
+                       grep("beta", #starts with p to select "p" only 
+                            colnames(Samples))][,1:NAge]
+    
+    betaJumpMat <- Samples[PostDraw, #Select S posterior draws
+                           grep(paste0("\\<","betaJump"), #starts with p to select "p" only 
+                                colnames(Samples))]
+    
+    sigma_epsVec <- Samples[PostDraw, #Select S posterior draws
+                            grep(paste0("\\<","sigma_eps"), #starts with p to select "p" only 
+                                 colnames(Samples))]
+    
+    FutureZArray <- array(data = 0,dim = c(NAge,H,S),
+                          dimnames = list("Age"=1:NAge, "Time"=1:H, "It"=1:S))
+    
+    for(s in 1:S){
+      #via Matrix multiplication (outer product)
+      FutureZArray[,,s] <- 
+        betaMat[s,]%*%t(FutureKtMat[s,])+ #Normal effect
+        betaJumpMat[s,]%*%t(FutureJt[s,2:(H+1)]) - #JT+1
+        betaJumpMat[s,]%*%t(FutureJt[s,1:H]) +#JT
+        sapply(1:H, function(x){rnorm(n = NAge, 
+                                      mean = 0, sd = sigma_epsVec[s])}) #error Term
+    }
+    
+  return(FutureZArray)
+}
