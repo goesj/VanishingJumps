@@ -61,8 +61,9 @@ SamplesLiuLi_US <- runMCMC(comLiuLi_US$bLiuLi_US,
 
 
 SummaryOutput(SamplesLiuLi_US, 
-              params=c("QMat","drift","p","sigma_eps",
-                       "muY","sigma_time","beta","betaJump","sdY")) %>% 
+              params=c("beta","betaJump",
+                       "drift","sigma_eps","sigma_time",
+                       "p","a","muY","sdY")) %>% 
   print(n=250) 
 
 
@@ -76,7 +77,8 @@ OwnMod_US <-  nimbleModel(code=OwnModel,
                          data=NimbleDataUS)
 
 cOwnMod_US <- configureMCMC(OwnMod_US, 
-                           print = TRUE, useConjugacy = FALSE,
+                           print = TRUE, 
+                           useConjugacy = FALSE, #to save time configuring
                            monitors = c("k","sigma_eps",
                                         "beta","betaJump", "N_t","p","a",
                                         "sigma_time",
@@ -98,14 +100,16 @@ params_to_remove <-  c(
 
 cOwnMod_US$removeSamplers(params_to_remove)
 
+#Gibbs Sampler
 cOwnMod_US$addDefaultSampler(nodes=c("drift","p"), 
                              useConjugacy = TRUE)
+cOwnMod_US$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
+                             useConjugacy = TRUE, print = FALSE)
 
+#Slice Sampler
 cOwnMod_US$addSampler(nodes = "muY",type="slice")
 cOwnMod_US$addSampler(nodes = "a",type="slice")
 cOwnMod_US$addSampler(nodes = "sdY",type="slice")
-cOwnMod_US$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
-                             useConjugacy = TRUE, print = FALSE)
 
 # slice sampler for Y_t
 for(j in 3:(NYear+1)){ #one time period longer due to differencing
@@ -113,6 +117,7 @@ for(j in 3:(NYear+1)){ #one time period longer due to differencing
                           type="slice")
 }
 
+#AF_Slice Sampler
 cOwnMod_US$addSampler(target= paste0("b1[1:",NAge,"]"),
                           type="AF_slice") 
 cOwnMod_US$addSampler(target= paste0("b2[1:",NAge,"]"),
@@ -131,11 +136,10 @@ SamplesOwn_US <- runMCMC(comOwnMod_US$bOwnMod_US,
                           nchains = 2)
 
 SummaryOutput(SamplesOwn_US, 
-              params=c("drift","p","sigma_eps",
-                       "muY","sigma_time","beta","betaJump",
-                       "a","sdY")) %>% 
+              params=c("beta","betaJump",
+                       "drift","sigma_eps","sigma_time",
+                       "p","a","muY","sdY")) %>% 
   print(n=250) 
-
 
 ######### 1.4. Save Results ####################################################
 save(SamplesLiuLi_US,
@@ -146,7 +150,7 @@ save(SamplesLiuLi_US,
 ####### 1.5 Calcualte WAIC AND LOO #############################################
 
 #load data in case no new samples have been drawn
-load(file.path(getwd(),"Results/SamplesUS.RData")) # in case
+load(file.path(getwd(),"Results/SamplesUS.RData")) 
 
 LikeMatOwn_US <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesOwn_US),
                                     n = length(ZMatUS),
@@ -225,8 +229,9 @@ SamplesLiuLi_It <- runMCMC(comLiuLi_It$bLiuLi_It,
 
 
 SummaryOutput(SamplesLiuLi_It, 
-              params=c("QMat","drift","p","sigma_eps",
-                       "muY","sigma_time","beta","betaJump","sdY")) %>% 
+              params=c("beta","betaJump",
+                       "drift","sigma_eps","sigma_time",
+                       "p","a","muY","sdY")) %>% 
   print(n=250) 
 
 
@@ -261,14 +266,15 @@ params_to_remove <-  c(
 
 cOwnMod_It$removeSamplers(params_to_remove)
 
+#Gibbs Sampler
 cOwnMod_It$addDefaultSampler(nodes=c("drift","p"), 
                              useConjugacy = TRUE)
-
+cOwnMod_It$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
+                             useConjugacy = TRUE, print = FALSE)
+#Slice
 cOwnMod_It$addSampler(nodes = "muY",type="slice")
 cOwnMod_It$addSampler(nodes = "a",type="slice")
 cOwnMod_It$addSampler(nodes = "sdY",type="slice")
-cOwnMod_It$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
-                             useConjugacy = TRUE, print = FALSE)
 
 # slice sampler for Y_t
 for(j in 3:(NYear+1)){ #one time period longer due to differencing
@@ -276,6 +282,7 @@ for(j in 3:(NYear+1)){ #one time period longer due to differencing
                         type="slice")
 }
 
+#AF Slice
 cOwnMod_It$addSampler(target= paste0("b1[1:",NAge,"]"),
                       type="AF_slice") 
 cOwnMod_It$addSampler(target= paste0("b2[1:",NAge,"]"),
@@ -293,9 +300,9 @@ SamplesOwn_It <- runMCMC(comOwnMod_It$bOwnMod_It,
                          nburnin = 5000,
                          nchains = 2)
                                         
-SummaryOutput(SamplesOwn_It, params=c("drift","p",
-                                      "sigma_eps","beta","muY","sigma_time",
-                                      "sdY","a")) %>% print(n=450)  
+SummaryOutput(SamplesOwn_It, params=c("beta","betaJump",
+                                      "drift","sigma_eps","sigma_time",
+                                      "p","a","muY","sdY")) %>% print(n=450)  
 
 ############ 2.4 Save Results ##################################################
 
@@ -303,7 +310,12 @@ save(SamplesLiuLi_It,
      SamplesOwn_US, file= file.path(getwd(),"Results/SamplesIt.RData"))
 
 
+
 ########## 2.5. Calculation of WAIC AND LOO ####################################
+
+#load data in case no new samples have been drawn
+load(file.path(getwd(),"Results/SamplesIt.RData"))
+
 LikeMatOwn_It <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesOwn_It),
                                   n = length(ZMatIt),
                                   ZMat = ZMatIt)
@@ -382,8 +394,9 @@ SamplesLiuLi_Sp <- runMCMC(comLiuLi_Sp$bLiuLi_Sp,
                            nchains = 2)
 
 SummaryOutput(SamplesLiuLi_Sp, 
-              params=c("QMat","drift","p","sigma_eps",
-                       "muY","sigma_time","beta","betaJump","sdY","a")) %>% 
+              params=c("beta","betaJump",
+                       "drift","sigma_eps","sigma_time",
+                       "p","a","muY","sdY")) %>% 
   print(n=250) 
 
 
@@ -418,21 +431,23 @@ params_to_remove <-  c(
 
 cOwnMod_Sp$removeSamplers(params_to_remove)
 
+#Gibbs
 cOwnMod_Sp$addDefaultSampler(nodes=c("drift","p"), 
                              useConjugacy = TRUE)
-
-cOwnMod_Sp$addSampler(nodes = "muY",type="slice")
-cOwnMod_Sp$addSampler(nodes = "a",type="slice")
-cOwnMod_Sp$addSampler(nodes = "sdY",type="slice")
 cOwnMod_Sp$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
                              useConjugacy = TRUE, print = FALSE)
 
+#Slice
+cOwnMod_Sp$addSampler(nodes = "muY",type="slice")
+cOwnMod_Sp$addSampler(nodes = "a",type="slice")
+cOwnMod_Sp$addSampler(nodes = "sdY",type="slice")
 # slice sampler for Y_t
 for(j in 3:(NYear+1)){ #one time period longer due to differencing
   cOwnMod_Sp$addSampler(target=paste0("Y_t[",j,"]"),
                         type="slice")
 }
 
+#AF_Slice
 cOwnMod_Sp$addSampler(target= paste0("b1[1:",NAge,"]"),
                       type="AF_slice") 
 cOwnMod_Sp$addSampler(target= paste0("b2[1:",NAge,"]"),
@@ -449,8 +464,9 @@ SamplesOwn_Sp <- runMCMC(comOwnMod_Sp$bOwnMod_Sp,
                          nchains = 2)
 
 SummaryOutput(SamplesOwn_Sp, 
-              params=c("drift","p","sigma_eps","beta",
-                       "muY","sigma_time","sdY","a","betaJump","N_t")) %>% 
+              params=c("beta","betaJump",
+                       "drift","sigma_eps","sigma_time",
+                       "p","a","muY","sdY")) %>% 
   print(n=450)  
 
 
@@ -460,8 +476,11 @@ save(SamplesLiuLi_Sp,
      SamplesOwn_Sp, file= file.path(getwd(),"Results/SamplesSp.RData"))
 
 
-
 ######### 3.5. Calculate WAIC and LOO-CV ######################################
+
+#load data in case no new samples have been drawn
+load(file.path(getwd(),"Results/SamplesSp.RData"))
+
 #### Caclulation of WAIC and loo 
 LikeMatOwn <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesOwn_Sp),
                                   n = length(ZMatSp),
@@ -477,10 +496,6 @@ WAICLiu <- loo::waic(log(LikeMatLiu))
 LOOLiu <- loo::loo(log(LikeMatLiu)) #loo IC = -2 elpd_loo
 LOOOwn <- loo::loo(log(LikeMatOwn))
 
-
-#Compare WAIC's
-Details_LiuLi_Sp <- comLiuLi_Sp_OC$bLiuLi_Sp_OC$getWAIC()
-Details_Own_Sp <- comOwnMod_Sp_Rep$bOwnMod_Sp_Rep$getWAIC()
 
 CompDataFrameSp <- data.frame("Model"=c("Own","Liu-Li"),
                               "LOOCV"= c(LOOOwn$estimates[3,1],
