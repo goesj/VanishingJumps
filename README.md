@@ -1,12 +1,12 @@
 # VanishingJumps
-Code for Paper of pandemic jump modelling
-
+Code for Paper "Bayesian mortality modelling with pandemics: a vanishing jump approach" by Julius Goes, Karim Barigou and Anne Leucht. 
+ 
 ## Models 
 Own, as well as a Bayesian implementation of the Liu,Li(2015) models can be found `01_NimbleModels.R`
 The models are fitted using **nimble** 
 
 ## Data 
-Within the `Data` folder the following can be found: Deaths and Population data by Age, and time for multiple countries. The data was downloaded from both the Human Mortality Database (HMD) ((https://www.mortality.org/)) as well as Eurostat (https://ec.europa.eu/eurostat/data/database). 
+Within the `Data` folder the following can be found: Deaths and Population data by Age, and time for multiple countries. The data was downloaded from both the Human Mortality Database (HMD) (https://www.mortality.org/) as well as Eurostat (https://ec.europa.eu/eurostat/data/database). 
 
 ## Results
 Within the `Results` folder the following can be found: 
