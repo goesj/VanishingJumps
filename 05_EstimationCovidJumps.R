@@ -130,9 +130,9 @@ comOwnMod_US <- compileNimble(OwnMod_US,
 
 
 SamplesOwn_US <- runMCMC(comOwnMod_US$bOwnMod_US, 
-                          niter = 17500,
+                          niter = 15000,
                           thin=10,
-                          nburnin = 7500, 
+                          nburnin = 5000, 
                           nchains = 2)
 
 SummaryOutput(SamplesOwn_US, 
@@ -140,6 +140,7 @@ SummaryOutput(SamplesOwn_US,
                        "drift","sigma_eps","sigma_time",
                        "p","a","muY","sdY")) %>% 
   print(n=250) 
+
 
 ######### 1.4. Save Results ####################################################
 save(SamplesLiuLi_US,
@@ -295,9 +296,9 @@ comOwnMod_It <- compileNimble(OwnMod_It,
                               bOwnMod_It)
                                       
 SamplesOwn_It <- runMCMC(comOwnMod_It$bOwnMod_It,
-                         niter = 15000,
+                         niter = 17500,
                          thin=10,
-                         nburnin = 5000,
+                         nburnin = 7500,
                          nchains = 2)
                                         
 SummaryOutput(SamplesOwn_It, params=c("beta","betaJump",
@@ -307,7 +308,7 @@ SummaryOutput(SamplesOwn_It, params=c("beta","betaJump",
 ############ 2.4 Save Results ##################################################
 
 save(SamplesLiuLi_It, 
-     SamplesOwn_US, file= file.path(getwd(),"Results/SamplesIt.RData"))
+     SamplesOwn_It, file= file.path(getwd(),"Results/SamplesIt.RData"))
 
 
 
