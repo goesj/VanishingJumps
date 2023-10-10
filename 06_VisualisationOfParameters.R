@@ -31,9 +31,9 @@ SamplesSpSingle <- do.call(rbind,
   mutate(Country = "Spain")
 
 
-SamplesTotal <- bind_rows(SamplesItSingle,
-                          SamplesUSSingle,
-                          SamplesSpSingle)
+SamplesTotal <- bind_rows(SamplesUSSingle,
+                          SamplesSpSingle,
+                          SamplesItSingle)
 
 ######## 1.2. Parameter Density Plot ###########################################
 SampleDensPlot <- function(Samples, Parameter = p){
@@ -42,9 +42,9 @@ SampleDensPlot <- function(Samples, Parameter = p){
   } else  {
     Plot <- Samples %>% 
       select(a,p,muY,sdY,Country) %>% 
-      #Attention: Factor level is turned around, so that last factor (Italy) is on top
+      #Attention: Factor level is turned around, so that last factor (US) is on top
       mutate("Country" = factor(Country, 
-                                levels = c("United States","Spain","Italy"))) %>% 
+                                levels = c("Italy","Spain","United States"))) %>% 
       ggplot(aes(x = .data[[Parameter]],   #select parameter for x 
                          y = Country))+    #change here parameter to sample
       ggdist::stat_slabinterval(aes(fill_ramp=after_stat(level),
@@ -58,10 +58,10 @@ SampleDensPlot <- function(Samples, Parameter = p){
                                 point_size = 2, 
                                 linewidth=2,
                                 shape=21)+
-      scale_fill_manual(values =c("#98579B","#c9b045","#81A88D"))+ 
+      scale_fill_manual(values =c("#81A88D","#c9b045","#98579B"))+ #Colors for Countries
       ggdist::scale_fill_ramp_discrete(range = c(0.2, 0.95))+
-      scale_color_manual(values=c("#400040","#806E26","#355C41"))+
-      ggdist::scale_slab_color_discrete(c("#400040","#806E26","#355C41"),
+      scale_color_manual(values=c("#355C41","#806E26","#400040"))+
+      ggdist::scale_slab_color_discrete(c("#355C41","#806E26","#400040"),
                                         aesthetics = "slab_color",
                                         na.translate = FALSE)+
       theme(axis.text = element_text(size = 24), #change size of axis text
@@ -82,8 +82,8 @@ SampleDensPlot(Samples = SamplesTotal, Parameter =  "muY")
 #Plot for Visualisation of Jump Occurence
 SamplesTotal %>% 
   select(contains("N_t"),Country) %>%
-  mutate(Country = factor(Country, levels = c("Italy","Spain","United States"),
-                          labels = c("a) Italy","b) Spain","c) United States"))) %>% 
+  mutate(Country = factor(Country, levels = c("United States","Spain","Italy"),
+                          labels = c("a) United States" ,"b) Spain","c) Italy"))) %>% 
   group_by(Country) %>% 
   summarise(across(.cols = where(is.numeric),.fns = mean)) %>% 
   pivot_longer(., cols = 2:ncol(.), names_to="Time", values_to = "PostMean") %>% 
@@ -93,7 +93,7 @@ SamplesTotal %>%
                linewidth = 1.8)+
   geom_point(aes(y = PostMean), size = 3, pch = 18)+
   facet_wrap(~Country, ncol = 1)+
-  scale_color_manual(values=c("#81A88D","#c9b045","#98579B"))+
+  scale_color_manual(values=c("#98579B","#c9b045","#81A88D"))+
   scale_x_discrete(labels = 1981:2022)+
   ylab("Posterior Mean")+xlab("")+
   theme(legend.position = "none",
@@ -110,12 +110,11 @@ SamplesTotal %>%
 
 #Plot to create the age pattern of Mortality Jump for all three Countries
 #https://r-graph-gallery.com/web-line-chart-small-multiple-all-group-greyed-out.html
-#font <- "serif"
 
 SamplesTotal %>% 
   select_if(grepl(paste0(c("Country","betaJump"), collapse="|"), names(.))) %>% 
-  mutate(Country = factor(Country, levels = c("Italy","Spain","United States"),
-                          labels = c("a) Italy","b) Spain","c) United States"))) %>% 
+  mutate(Country = factor(Country, levels = c("United States","Spain","Italy"),
+                          labels = c("a) United States" ,"b) Spain","c) Italy"))) %>% 
   pivot_longer(., cols = 1:10, names_to = "BetaVal",values_to = "Val") %>%  #transform into long 
   mutate(BetaVal = fct_inorder(as.factor(BetaVal),ordered = NA)) %>% 
   group_by(Country,BetaVal) %>%  #group by
@@ -128,8 +127,8 @@ SamplesTotal %>%
   gghighlight::gghighlight(use_direct_label = FALSE,
               unhighlighted_params = list(colour = alpha("grey85", 1)))+
   facet_wrap(~  Country, nrow = 3)+
-  scale_fill_manual(values=c("#81A88D","#c9b045","#98579B"))+
-  scale_color_manual(values=c("#182b1e","#834333","#2b012d"))+
+  scale_fill_manual(values=c("#98579B","#c9b045","#81A88D"))+
+  scale_color_manual(values=c("#2b012d","#834333","#182b1e"))+
   ylab("Posterior Value")+
   xlab("Age Group")+
   scale_x_discrete(labels = c(paste0(paste0(seq(0,80,10),sep="-"),
@@ -632,6 +631,9 @@ DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),
 load(file = file.path(getwd(),"Results/SamplesSp.RData")) # own Model
 load(file = file.path(getwd(),"Results/SamplesUS.RData")) # own Model
 load(file = file.path(getwd(),"Results/SamplesIt.RData")) # own Model
+
+#Load observed Data
+load(file = file.path(getwd(),"Data/CovidData.RData")) # Load Data
  
 #Function to generate Forecasts as well as return future Jt's 
 FutureZ_Param <- function(Samples,S ,H ,OwnMod = TRUE,NAge){
@@ -764,16 +766,15 @@ FutureZIt <- FutureZ_Param(H=H, OwnMod = TRUE,
                            S=S,NAge = 10)
   
 #Create list of all future Forecasts
-FutureZList <- list(FutureZSp,
-                      FutureZUS,
-                      FutureZIt)
+FutureZList <- list( FutureZUS,
+                     FutureZSp,
+                     FutureZIt)
 
-#Create future values of c (see paper)
 JumpEffectArray <- array(0, dim=c(10, H+1, S,3),
-                           dimnames = list("Age"=1:10,
-                                           "FC"=1:(H+1),
-                                           "It"=1:S,
-                                           "Country"=c("b) Spain","c) US","a) Italy")))
+                         dimnames = list("Age"=1:10,
+                                         "FC"=1:(H+1),
+                                         "It"=1:S,
+                                         "Country"=c("a) US", "b) Spain","c) Italy")))
 for (c in 1:3) { #over countries
   for (s in 1:S) { #over Iterations
     for(x in 1:10){ #over Age
@@ -794,9 +795,9 @@ JumpEffectQuant <-
   
 
 #Calculate the actual, observed Covid Increase
-CovidIncrease <- bind_rows(mutate(LambdaVecSp, Country="b) Spain"),
-                           mutate(LambdaVecUs, Country="c) US"),
-                           mutate(LambdaVecIt, Country="a) Italy")) %>% 
+CovidIncrease <- bind_rows(mutate(LambdaVecUs, Country="a) US"),
+                           mutate(LambdaVecSp, Country="b) Spain"),
+                           mutate(LambdaVecIt, Country="c) Italy")) %>% 
   group_by(NewAgeInd,Country) %>% 
   filter(Year %in% c(2019,2020)) %>% 
   reframe("PercentageIncrease"=exp(diff(log(Rate)))) %>%  #calculation of mortality rate increase between 2019 and 2020
