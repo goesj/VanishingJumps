@@ -97,6 +97,7 @@ OwnModel <- nimbleCode({
   N_t[1:2] <- 0
   Y_t[1:2] <- 0
   J[1:2] <- 0 #Corner Constraint on Delta J1 = 0
+  
   for (t in 3:(N_Year+1)){ #one year longer for differencing
     N_t[t] ~ dbern(p)
     Y_t[t] ~ dnorm(mean = muY, sd = sdY)
@@ -138,50 +139,6 @@ OwnModel <- nimbleCode({
       ZMat[x,t] ~ dnorm(mu[x,t],sd=sigma_eps)
     }
     
-  }
-})
-
-## Lee Carter Model differenced Data
-LC_Diff <- nimbleCode({
-  
-  # Lee Carter Model differenced
-  #
-  # Time Effect (iid Normal Prior)+
-  # Age Effect (Dirichtlet Prior) +
-  # Overdispersion Parameter (normal prior)+
-  #
-  #Prior Parameterisation
-  #Priors on Time Parameters
-  #differenced random Walk 
-  for(t in 1:(N_Year)){
-    k[t] ~ dnorm(mean = drift,sd=sigma_time) #State space model formualtion
-  }
-  
-  sigma_time ~  T(dnorm(mean=0, sd=2), min = 0, ) 
-  drift ~ dnorm(mean = 0,sd = 5)
-  
-  #Dirichlet Prior
-  #alphaJump[1:N_AgeGroups] <- c(rep(1,3),3,3,3,rep(1,4))
-  # a_dirich[1:N_AgeGroups] <- rep(1,N_AgeGroups)
-  # beta[1:N_AgeGroups] ~ ddirch(alpha=a_dirich[1:N_AgeGroups])
-  
-  for(x in 1:N_AgeGroups){
-    b1[x]~ dgamma(shape = 1, rate = 1)
-  }
-
-  # Dirichlet Distribution is standardized Gamma Dist
-  beta[1:(N_AgeGroups-1)] <- b1[1:(N_AgeGroups-1)]/sum(b1[1:N_AgeGroups])
-  beta[N_AgeGroups] <- 1 - sum(beta[1:(N_AgeGroups-1)])
-   
-  
-  sigma_eps ~ T(dnorm(mean=0, sd=2), min = 0, ) 
-  
-  #Putting all Parameters together
-  for(x in 1:N_AgeGroups){
-    for(t in 1:N_Year){
-      mu[x,t] <- beta[x]*k[t]
-      ZMat[x,t] ~ dnorm(mu[x,t],sd=sigma_eps)
-    }
   }
 })
 
