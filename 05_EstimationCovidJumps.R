@@ -177,174 +177,10 @@ save(CompDataFrameUS,
      file = file.path(getwd(),"Results/WAIC_US.RData"))
 
 
-# ############## 2. ITALY #####################################################
 
-#### 2.1 Put data into right form for NIMBLE ##################################
-NAge <- nrow(ZMatIt)
-NYear <- ncol(ZMatIt)
+# ####################### 2. Spain #############################################
 
-NimbleConstIt <- list("N_AgeGroups"=NAge,
-                       "N_Year"=NYear)
-
-NimbleDataIt <- list("ZMat"=ZMatIt) 
-
-######### 2.2 Liu,Li Model #####################################################
-LiuLi_It <-  nimbleModel(code=LiuLi_Model, 
-                           constants = NimbleConstIt, 
-                           data=NimbleDataIt)
-
-cLiuLi_It <- configureMCMC(LiuLi_It, 
-                             print = TRUE, useConjugacy = TRUE,
-                             monitors = c("k",
-                               "sigma_eps",
-                               "beta","betaJump", "N_t","p",
-                               "sigma_time",
-                               "drift",
-                               "muY","sdY",
-                               "mu","Y_t"
-                             ),
-                             enableWAIC = TRUE) #to compare Models
-
-cLiuLi_It$removeSamplers(paste0("b1[",1:NAge,"]"),
-                           paste0("b2[",1:NAge,"]"),
-                           "muY","sdY")
-
-cLiuLi_It$addSampler(target= paste0("b1[1:",NAge,"]"),
-                       type="AF_slice") 
-
-cLiuLi_It$addSampler(target= paste0("b2[1:",NAge,"]"),
-                       type="AF_slice")
-cLiuLi_It$addSampler(nodes = "muY",type="slice")
-cLiuLi_It$addSampler(nodes = "sdY",type="slice")
-
-bLiuLi_It <- buildMCMC(cLiuLi_It)
-comLiuLi_It <- compileNimble(LiuLi_It,
-                               bLiuLi_It)
-
-
-SamplesLiuLi_It <- runMCMC(comLiuLi_It$bLiuLi_It, 
-                          niter = 15000,
-                          thin=10,
-                          nburnin = 5000, 
-                          nchains = 2)
-
-
-SummaryOutput(SamplesLiuLi_It, 
-              params=c("beta","betaJump",
-                       "drift","sigma_eps","sigma_time",
-                       "p","a","muY","sdY")) %>% 
-  print(n=250) 
-
-
-
-####### 2.3. OWN MODEL #########################################################
-OwnMod_It <-  nimbleModel(code=OwnModel, 
-                          constants = NimbleConstIt, 
-                          data=NimbleDataIt)
-
-cOwnMod_It <- configureMCMC(OwnMod_It, 
-                            print = TRUE, useConjugacy = FALSE,
-                            monitors = c("k",
-                                         "sigma_eps",
-                                        "beta","betaJump","sdY","muY",
-                                        "N_t","p",
-                                        "sigma_time",
-                                       "drift","a",
-                                        "mu",
-                                        "Y_t","J"
-                                         ),
-                            enableWAIC = TRUE) 
-
-############ 2.3.2 Adjust Samplers ############################################
-params_to_remove <-  c(
-  "p","drift",
-  paste0("k[",1:NYear,"]"),
-  paste0("Y_t[",3:(NYear),"]"),
-  paste0("b1[",1:NAge,"]"),
-  paste0("b2[",1:NAge,"]"),
-  "a","muY","sdY"
-)
-
-cOwnMod_It$removeSamplers(params_to_remove)
-
-#Gibbs Sampler
-cOwnMod_It$addDefaultSampler(nodes=c("drift","p"), 
-                             useConjugacy = TRUE)
-cOwnMod_It$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
-                             useConjugacy = TRUE, print = FALSE)
-#Slice
-cOwnMod_It$addSampler(nodes = "muY",type="slice")
-cOwnMod_It$addSampler(nodes = "a",type="slice")
-cOwnMod_It$addSampler(nodes = "sdY",type="slice")
-
-# slice sampler for Y_t
-for(j in 3:(NYear)){ #one time period longer due to differencing
-  cOwnMod_It$addSampler(target=paste0("Y_t[",j,"]"),
-                        type="slice")
-}
-
-#AF Slice
-cOwnMod_It$addSampler(target= paste0("b1[1:",NAge,"]"),
-                      type="AF_slice") 
-cOwnMod_It$addSampler(target= paste0("b2[1:",NAge,"]"),
-                      type="AF_slice")
-
-
-                                        
-bOwnMod_It <- buildMCMC(cOwnMod_It)
-comOwnMod_It <- compileNimble(OwnMod_It,
-                              bOwnMod_It)
-                                      
-SamplesOwn_It <- runMCMC(comOwnMod_It$bOwnMod_It,
-                         niter = 15000,
-                         thin=10,
-                         nburnin = 5000,
-                         nchains = 2)
-                                        
-SummaryOutput(SamplesOwn_It, params=c("beta","betaJump",
-                                      "drift","sigma_eps","sigma_time",
-                                      "p","a","muY","sdY")) %>% print(n=450)  
-
-############ 2.4 Save Results ##################################################
-
-save(SamplesLiuLi_It, 
-     SamplesOwn_It, file= file.path(getwd(),"Results/SamplesIt.RData"))
-
-
-########## 2.5. Calculation of WAIC AND LOO ####################################
-
-#load data in case no new samples have been drawn
-load(file.path(getwd(),"Results/SamplesIt.RData"))
-
-LikeMatOwn_It <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesOwn_It),
-                                  n = length(ZMatIt),
-                                  ZMat = ZMatIt)
-
-LikeMatLiu_It <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesLiuLi_It),
-                                  n = length(ZMatIt),
-                                  ZMat = ZMatIt)
-
-WAICOwnIt <- loo::waic(log(LikeMatOwn_It))
-WAICLiuIt <- loo::waic(log(LikeMatLiu_It))
-
-LOOOwnIt <- loo::loo(log(LikeMatOwn_It))
-LOOLiuIt <- loo::loo(log(LikeMatLiu_It)) # loo IC = -2 elpd_loo
-
-
-CompDataFrameIt <- data.frame("Model"=c("Own","Liu-Li"),
-                              "LOOCV"= c(LOOOwnIt$estimates[3,1],
-                                         LOOLiuIt$estimates[3,1]),
-                              "WAIC"=c(WAICOwnIt$estimates[3,1],
-                                       WAICLiuIt$estimates[3,1]))
-
-save(CompDataFrameIt,
-     file = file.path(getwd(),"Results/WAIC_It.RData"))
-
-
-
-# ####################### 3. Spain #############################################
-
-#### 3.1 Data for NIMBLE #######################################################
+#### 2.1 Data for NIMBLE #######################################################
 NAge <- nrow(ZMatSp)
 NYear <- ncol(ZMatSp)
 
@@ -353,7 +189,7 @@ NimbleConstSp <- list("N_AgeGroups"=NAge,
 
 NimbleDataSp <- list("ZMat"=ZMatSp) 
 
-############ 3.2 Liu,Li Model###################################################
+############ 2.2 Liu,Li Model###################################################
 LiuLi_Sp <-  nimbleModel(code=LiuLi_Model, 
                             constants = NimbleConstSp, 
                             data=NimbleDataSp)
@@ -400,7 +236,7 @@ SummaryOutput(SamplesLiuLi_Sp,
   print(n=250) 
 
 
-#### 3.3 Own Model  ##########################################################
+#### 2.3 Own Model  ##########################################################
 OwnMod_Sp <-  nimbleModel(code=OwnModel, 
                           constants = NimbleConstSp, 
                           data=NimbleDataSp)
@@ -419,7 +255,7 @@ cOwnMod_Sp <- configureMCMC(OwnMod_Sp,
                                              "Y_t","J"),
                                 enableWAIC = TRUE) 
 
-############# 3.2.1 Adjust Samplers ############################################
+############# 2.2.1 Adjust Samplers ############################################
 params_to_remove <-  c(
   "p","drift",
   paste0("k[",1:NYear,"]"),
@@ -471,12 +307,12 @@ SummaryOutput(SamplesOwn_Sp,
 
 
 
-#### 3.4 Save Results #########################################################
+#### 2.4 Save Results #########################################################
 save(SamplesLiuLi_Sp, 
      SamplesOwn_Sp, file= file.path(getwd(),"Results/SamplesSp.RData"))
 
 
-######### 3.5. Calculate WAIC and LOO-CV ######################################
+######### 2.5. Calculate WAIC and LOO-CV ######################################
 
 #load data in case no new samples have been drawn
 load(file.path(getwd(),"Results/SamplesSp.RData"))
@@ -505,3 +341,168 @@ CompDataFrameSp <- data.frame("Model"=c("Own","Liu-Li"),
 
 save(CompDataFrameSp,
      file = file.path(getwd(),"Results/WAIC_Sp.RData"))
+
+# ############## 3. ITALY #####################################################
+
+#### 3.1 Put data into right form for NIMBLE ##################################
+NAge <- nrow(ZMatIt)
+NYear <- ncol(ZMatIt)
+
+NimbleConstIt <- list("N_AgeGroups"=NAge,
+                      "N_Year"=NYear)
+
+NimbleDataIt <- list("ZMat"=ZMatIt) 
+
+######### 3.2 Liu,Li Model #####################################################
+LiuLi_It <-  nimbleModel(code=LiuLi_Model, 
+                         constants = NimbleConstIt, 
+                         data=NimbleDataIt)
+
+cLiuLi_It <- configureMCMC(LiuLi_It, 
+                           print = TRUE, useConjugacy = TRUE,
+                           monitors = c("k",
+                                        "sigma_eps",
+                                        "beta","betaJump", "N_t","p",
+                                        "sigma_time",
+                                        "drift",
+                                        "muY","sdY",
+                                        "mu","Y_t"
+                           ),
+                           enableWAIC = TRUE) #to compare Models
+
+cLiuLi_It$removeSamplers(paste0("b1[",1:NAge,"]"),
+                         paste0("b2[",1:NAge,"]"),
+                         "muY","sdY")
+
+cLiuLi_It$addSampler(target= paste0("b1[1:",NAge,"]"),
+                     type="AF_slice") 
+
+cLiuLi_It$addSampler(target= paste0("b2[1:",NAge,"]"),
+                     type="AF_slice")
+cLiuLi_It$addSampler(nodes = "muY",type="slice")
+cLiuLi_It$addSampler(nodes = "sdY",type="slice")
+
+bLiuLi_It <- buildMCMC(cLiuLi_It)
+comLiuLi_It <- compileNimble(LiuLi_It,
+                             bLiuLi_It)
+
+
+SamplesLiuLi_It <- runMCMC(comLiuLi_It$bLiuLi_It, 
+                           niter = 15000,
+                           thin=10,
+                           nburnin = 5000, 
+                           nchains = 2)
+
+
+SummaryOutput(SamplesLiuLi_It, 
+              params=c("beta","betaJump",
+                       "drift","sigma_eps","sigma_time",
+                       "p","a","muY","sdY")) %>% 
+  print(n=250) 
+
+
+
+####### 3.3. OWN MODEL #########################################################
+OwnMod_It <-  nimbleModel(code=OwnModel, 
+                          constants = NimbleConstIt, 
+                          data=NimbleDataIt)
+
+cOwnMod_It <- configureMCMC(OwnMod_It, 
+                            print = TRUE, useConjugacy = FALSE,
+                            monitors = c("k",
+                                         "sigma_eps",
+                                         "beta","betaJump","sdY","muY",
+                                         "N_t","p",
+                                         "sigma_time",
+                                         "drift","a",
+                                         "mu",
+                                         "Y_t","J"
+                            ),
+                            enableWAIC = TRUE) 
+
+############ 3.3.2 Adjust Samplers ############################################
+params_to_remove <-  c(
+  "p","drift",
+  paste0("k[",1:NYear,"]"),
+  paste0("Y_t[",3:(NYear),"]"),
+  paste0("b1[",1:NAge,"]"),
+  paste0("b2[",1:NAge,"]"),
+  "a","muY","sdY"
+)
+
+cOwnMod_It$removeSamplers(params_to_remove)
+
+#Gibbs Sampler
+cOwnMod_It$addDefaultSampler(nodes=c("drift","p"), 
+                             useConjugacy = TRUE)
+cOwnMod_It$addDefaultSampler(nodes=paste0("k[",2:NYear,"]"),
+                             useConjugacy = TRUE, print = FALSE)
+#Slice
+cOwnMod_It$addSampler(nodes = "muY",type="slice")
+cOwnMod_It$addSampler(nodes = "a",type="slice")
+cOwnMod_It$addSampler(nodes = "sdY",type="slice")
+
+# slice sampler for Y_t
+for(j in 3:(NYear)){ #one time period longer due to differencing
+  cOwnMod_It$addSampler(target=paste0("Y_t[",j,"]"),
+                        type="slice")
+}
+
+#AF Slice
+cOwnMod_It$addSampler(target= paste0("b1[1:",NAge,"]"),
+                      type="AF_slice") 
+cOwnMod_It$addSampler(target= paste0("b2[1:",NAge,"]"),
+                      type="AF_slice")
+
+
+
+bOwnMod_It <- buildMCMC(cOwnMod_It)
+comOwnMod_It <- compileNimble(OwnMod_It,
+                              bOwnMod_It)
+
+SamplesOwn_It <- runMCMC(comOwnMod_It$bOwnMod_It,
+                         niter = 15000,
+                         thin=10,
+                         nburnin = 5000,
+                         nchains = 2)
+
+SummaryOutput(SamplesOwn_It, params=c("beta","betaJump",
+                                      "drift","sigma_eps","sigma_time",
+                                      "p","a","muY","sdY")) %>% print(n=450)  
+
+############ 3.4 Save Results ##################################################
+
+save(SamplesLiuLi_It, 
+     SamplesOwn_It, file= file.path(getwd(),"Results/SamplesIt.RData"))
+
+
+########## 3.5. Calculation of WAIC AND LOO ####################################
+
+#load data in case no new samples have been drawn
+load(file.path(getwd(),"Results/SamplesIt.RData"))
+
+LikeMatOwn_It <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesOwn_It),
+                                     n = length(ZMatIt),
+                                     ZMat = ZMatIt)
+
+LikeMatLiu_It <- LikelihoodMatrixFun(Samples = do.call(rbind, SamplesLiuLi_It),
+                                     n = length(ZMatIt),
+                                     ZMat = ZMatIt)
+
+WAICOwnIt <- loo::waic(log(LikeMatOwn_It))
+WAICLiuIt <- loo::waic(log(LikeMatLiu_It))
+
+LOOOwnIt <- loo::loo(log(LikeMatOwn_It))
+LOOLiuIt <- loo::loo(log(LikeMatLiu_It)) # loo IC = -2 elpd_loo
+
+
+CompDataFrameIt <- data.frame("Model"=c("Own","Liu-Li"),
+                              "LOOCV"= c(LOOOwnIt$estimates[3,1],
+                                         LOOLiuIt$estimates[3,1]),
+                              "WAIC"=c(WAICOwnIt$estimates[3,1],
+                                       WAICLiuIt$estimates[3,1]))
+
+save(CompDataFrameIt,
+     file = file.path(getwd(),"Results/WAIC_It.RData"))
+
+
