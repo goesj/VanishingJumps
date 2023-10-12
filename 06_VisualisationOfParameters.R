@@ -131,8 +131,8 @@ SamplesTotal %>%
   scale_color_manual(values=c("#2b012d","#834333","#182b1e"))+
   ylab("Posterior Value")+
   xlab("Age Group")+
-  scale_x_discrete(labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                     seq(9,89,10)),"90+"))+  
+  scale_x_discrete(labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                           seq(14,84,10)),"85+"))+  
   theme(
         axis.text = element_text(size = 20), #change size of axis text
         axis.title = element_text(size = 22),
@@ -150,7 +150,7 @@ SamplesTotal %>%
 #Starting with the Age Effects beta_x, beta_x^J
 
 # 1.5.1.1 Beta Parameters 
-AgeVecCovid <-  c(paste0(paste0(seq(0,80,10),sep="-"),seq(9,89,10)),"90+")
+AgeVecCovid <-  c("0-4",paste0(paste0(seq(5,75,10),sep="-"),seq(14,84,10)),"85+")
 BetaParamUS <- SamplesUSSingle %>% 
   select(grep("beta",colnames(.))) %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
@@ -247,7 +247,7 @@ cowplot::plot_grid(BetaParamUS, OtherParamPlotUS, byrow = FALSE, nrow = 2,
 
 ######### 1.5.2 Spain ##########################################################
 ## 1.5.2.1 Beta Parameters 
-AgeVecCovid <-  c(paste0(paste0(seq(0,80,10),sep="-"),seq(9,89,10)),"90+")
+AgeVecCovid <-  c("0-4",paste0(paste0(seq(5,75,10),sep="-"),seq(14,84,10)),"85+")
 BetaParamSp <- SamplesSpSingle %>% 
   select(grep("beta",colnames(.))) %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
@@ -342,7 +342,7 @@ cowplot::plot_grid(BetaParamSp, OtherParamPlotSp, byrow = FALSE, nrow = 2,
 #####  1.5.3 Italy  #########################################################
 ## 1.5.3.1 Beta Parameters 
 
-AgeVecCovid <-  c(paste0(paste0(seq(0,80,10),sep="-"),seq(9,89,10)),"90+")
+AgeVecCovid <-  c("0-4",paste0(paste0(seq(5,75,10),sep="-"),seq(14,84,10)),"85+")
 
 BetaParamIt <- SamplesItSingle %>% 
   select(grep("beta",colnames(.))) %>% 
@@ -788,8 +788,8 @@ JumpEffectQuant <-
     reshape2::melt(JumpEffectArray, value.name = "logEffect") %>% 
     mutate(AgeGroup = factor(Age,   #Change type Variable to Factor
                              levels = 1:10,
-                             labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                               seq(9,89,10)),"90+"))) %>% 
+                             labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                     seq(14,84,10)),"85+"))) %>% 
     group_by(FC,AgeGroup,Country) %>% 
     ggdist::point_interval(logEffect, .width = c(0.9,0.95,0.99))
   
@@ -803,8 +803,8 @@ CovidIncrease <- bind_rows(mutate(LambdaVecUs, Country="a) US"),
   reframe("PercentageIncrease"=exp(diff(log(Rate)))) %>%  #calculation of mortality rate increase between 2019 and 2020
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
                            levels = 1:10,
-                           labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                             seq(9,89,10)),"90+")),
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+")),
          CovidIncrease=" ")#Empty column so it can appear in legend
 
 #Plot the Results

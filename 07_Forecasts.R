@@ -52,8 +52,8 @@ FutureLambdaVecIt_Sp <-
          Year = FCHorizon+2022) %>% 
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
                            levels = 1:10,
-                           labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                             seq(9,89,10)),"90+")))
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+")))
 
 #Calculate Quantiles 
 FutureValuesVecQuantile_Sp <- 
@@ -70,8 +70,8 @@ ObservedValuesVec_Sp <-
   LambdaVecSp %>% 
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
                            levels = 1:10,
-                           labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                             seq(9,89,10)),"90+"))) %>% 
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+"))) %>% 
   group_by(AgeGroup,Year) %>% 
   mutate("logRate"=log(Rate)) %>% 
   ggdist::point_interval(Rate, .width = c(0.5,0.8,0.99)) %>% 
@@ -85,7 +85,7 @@ FutureValuesVecQuantile_Sp <-
             y =. )
 
 #Select suitable age range
-AgeFilter <- c("40-49","50-59","60-69","70-79")
+AgeFilter <- c("45-54","55-64","65-74","75-84")
 
 #Plot results
 FutureValuesVecQuantile_Sp %>% 
@@ -150,8 +150,8 @@ FutureLambdaVecIt_Freq <-
          TInd = Var2, It = Var3) %>%
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
                            levels = 1:10,
-                           labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                             seq(9,89,10)),"90+")),
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+")),
          Year = TInd + 1980) 
 
 #Calculation of Quantiles
@@ -167,8 +167,8 @@ ObservedValuesVec2_Sp <-
   LambdaVecSp %>% 
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
                            levels = 1:10,
-                           labels = c(paste0(paste0(seq(0,80,10),sep="-"),
-                                             seq(9,89,10)),"90+"))) %>% 
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+"))) %>% 
   group_by(AgeGroup,Year) %>% 
   mutate("logRate"=log(Rate)) %>% 
   ggdist::point_interval(Rate, .width = c(0.9,0.95,0.99)) %>% 
@@ -196,7 +196,7 @@ FutureValuesVecQuantile_Sp_Freq <-
          Type = "Mean FC Freq") 
 
 
-AgeFilter <- c("40-49","50-59","60-69","70-79")
+  AgeFilter <- c("45-54","55-64","65-74","75-84")
 
 ### Add layer after layer, 
 theme_set(theme_minimal(base_size = 10))
