@@ -311,7 +311,6 @@ save(SamplesLiuLi_It,
      SamplesOwn_It, file= file.path(getwd(),"Results/SamplesIt.RData"))
 
 
-
 ########## 2.5. Calculation of WAIC AND LOO ####################################
 
 #load data in case no new samples have been drawn
