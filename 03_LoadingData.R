@@ -35,19 +35,6 @@ TotalDataUS <- data.frame("Y"=USDeaths$Total,
   rename("Pop"=Offset) %>% 
   arrange(Year)
 
-
-#Create Vector of Death Rates and Mort Improvement Rates
-LambdaVecUs <- TotalDataUS %>% mutate("Rate"=Deaths/Pop) %>% 
-  mutate("ZVal"=c(NA,diff(log(Rate))))%>% 
-  arrange(Year)
-
-LambdaMatUS <- matrix(LambdaVecUs$Rate,
-                      nrow = length(unique(LambdaVecUs$NewAgeInd)), 
-                      byrow = FALSE)
-
-#Differenced Log Death Rates
-ZMatUS <- apply(log(LambdaMatUS), 1, diff) %>% t()
-
 # Provisional Data United States #####
 #Death Data from NCHS (https://data.cdc.gov/NCHS/Provisional-COVID-19-Death-Counts-by-Age-in-Years-/3apk-4u4f)
 #Population Data from US Census (https://www.census.gov/data/tables/time-series/demo/popest/2020s-national-detail.html) 
@@ -91,7 +78,7 @@ US_2022_Dat <- left_join(Pop_US_2022_Grouped,
   mutate("TInd"=42) %>% 
   select(NewAgeInd, Year, Deaths, Pop, TInd) #Reorder Columns
 
-
+#### Total Data (add both datasets together)
 TotalDataUS <- rbind(TotalDataUS,
                      US_2022_Dat) #add 2022 Data
 
@@ -142,6 +129,7 @@ DeathsSP_EU21 <- Deaths_Sp_EU %>%
 ## Add Deaths of Year 2022 of provisional Yearly Data from EuroStat
 DeathsSp_Eu22 <- DeathsSp_Eu22_We %>% 
   mutate("NewAgeInd"= AgeLabFun_EU22()) %>% 
+  filter(`AGE.(Codes)`!="UNK") %>% #remove unknown age group
   group_by(NewAgeInd) %>% 
   summarise("Deaths"=sum(Total)) %>% 
   mutate("Year" = 2022)
@@ -200,7 +188,6 @@ ZMatSp <- apply(log(LambdaMatSp), 1, diff) %>% t()
 #Eurostat Population Data starts from 1992
 
 #HMD Data from 1981 - 1992 respectively 1981 - 1985 for Pop/Death
-library(openxlsx)
 Deaths_It_Eu <- read.xlsx(xlsxFile = 
                             file.path(getwd(),"Data/DeathsItaly_Eurostat.xlsx"),
                           startRow = 8, sheet = 3)
