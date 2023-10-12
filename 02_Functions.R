@@ -82,24 +82,24 @@ reorganise_mortality <- function(
 
 ####### HELPER FUNCTIONS FOR DATA MANIPULATION #################################
 AgeLabFun_EU <- function(AgeLabels){
-  # Age Groups of 10. Starting from 0-9, 10-19,..., 90+
-    HelperAgeLab <- data.frame("AgeOld" = unique(AgeLabels)[-1],
-                               "AgeNew" = c(rep(1:10,each=10),10))
+  # Age Groups of 10. Starting from <5,5-14,15-25,...,85+ 
+  HelperAgeLab <- data.frame("AgeOld" = unique(AgeLabels)[-1],
+                             "AgeNew" = c(rep(1,5),rep(2:10,each=10),rep(10,6)))
   return(HelperAgeLab)
 }
 
 #Function for EU22 Age Groups
 AgeLabFun_EU22 <- function(){
-    # Age Groups of 10. Starting from 0-9, 10-19,..., 90+
-    val <- c(rep(1:9, each=2),10,10)
+  #Age Groups of 10. Starting from <5,5-14,15-25,...,85+ 
+  val <-  c(1,rep(2:9, each = 2), rep(10,3))
   return(val)
 }
 
 AgeLabFun_HMD <- function(Type = 1){
   if(Type == 1){
-    # Age Groups of 10. Starting from 0-9, 10-19,..., 90+
+    #Age Groups of 10. Starting from <5,5-14,15-25,...,85+ 
     HelperHMD <- data.frame("AgeOld"=1:24,
-                            "AgeNew"=c(1,1,1,rep(2:10,each=2),rep(10,3)))
+                            "AgeNew"=c(1,1,rep(2:9,each=2),rep(10,6)))
   }else { #Only for UK Data 
     #Age Groups of <1, 1-4, 5-15, 15-25,...
     HelperHMD <- data.frame("AgeOld"=1:24,
