@@ -255,7 +255,7 @@ cOwnMod_It <- configureMCMC(OwnMod_It,
                                          ),
                             enableWAIC = TRUE) 
 
-############# 2.3.2 Adjust Samplers ############################################
+############ 2.3.2 Adjust Samplers ############################################
 params_to_remove <-  c(
   "p","drift",
   paste0("k[",1:NYear,"]"),
@@ -401,7 +401,7 @@ SummaryOutput(SamplesLiuLi_Sp,
   print(n=250) 
 
 
-###### 3.3 Own Model  ##########################################################
+#### 3.3 Own Model  ##########################################################
 OwnMod_Sp <-  nimbleModel(code=OwnModel, 
                           constants = NimbleConstSp, 
                           data=NimbleDataSp)
@@ -472,7 +472,7 @@ SummaryOutput(SamplesOwn_Sp,
 
 
 
-##### 3.4 Save Results #########################################################
+#### 3.4 Save Results #########################################################
 save(SamplesLiuLi_Sp, 
      SamplesOwn_Sp, file= file.path(getwd(),"Results/SamplesSp.RData"))
 
