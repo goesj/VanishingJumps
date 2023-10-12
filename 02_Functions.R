@@ -1,5 +1,5 @@
 ########## FUNCTIONS ###########################################################
-library(rstan);library(tidyverse)
+library(rstan);library(tidyverse);library(bayestestR)
 
 #### FUNCTION FOR CREATION OF SUMMARY OUTPUT FROM NIMBLE SAMPLES #############
 SummaryOutput <- function(MCMCSampler, params="all", quantiles=c(0.1,0.9)){
@@ -29,13 +29,14 @@ SummaryOutput <- function(MCMCSampler, params="all", quantiles=c(0.1,0.9)){
   
   if(params[1]=="all"){ #check if 
     Summary <- sapply(MR, function(x){c(mean(x),
+                                        bayestestR::map_estimate(x),
                                         sd(x),
                                         quantile(x, probs=quantiles, na.rm = TRUE),
                                         rstan::Rhat(x),
                                         rstan::ess_bulk(x),
                                         rstan::ess_tail(x))}) %>% t() %>%  
       as_tibble(., .name_repair = "unique") %>% 
-      rename_with(.fn = function(x) {c("mean", "sd",quantiles, "Rhat", "bulk_ess", "tail_ess")}, 
+      rename_with(.fn = function(x) {c("mean","MAP", "sd",quantiles, "Rhat", "bulk_ess", "tail_ess")}, 
                   .cols = everything()) %>% 
       mutate("Param"=names_params, .before=1)
   } else {
@@ -45,16 +46,17 @@ SummaryOutput <- function(MCMCSampler, params="all", quantiles=c(0.1,0.9)){
       #Match each parameter on its own, to avoid situations where a single letter i.e. a is matched to multiple words
       Ind <- sapply(params, 
                     function(y){grep(paste0("\\<",y), #match beginning of word
-                            x = names(MR))}) %>% unlist() %>% unique() #only unique names
+                                     x = names(MR))}) %>% unlist() %>% unique() #only unique names
     }
     Summary <- sapply(MR[Ind], function(x){c(mean(x),
+                                             bayestestR::map_estimate(x),
                                              sd(x),
                                              quantile(x, probs=quantiles, na.rm = TRUE),
                                              rstan::Rhat(x),
                                              rstan::ess_bulk(x),
                                              rstan::ess_tail(x))}) %>% t() %>%  
       as_tibble(., .name_repair = "unique") %>% 
-      rename_with(.fn = function(x) {c("mean", "sd",quantiles, "Rhat", "bulk_ess", "tail_ess")}, 
+      rename_with(.fn = function(x) {c("mean","MAP", "sd",quantiles, "Rhat", "bulk_ess", "tail_ess")}, 
                   .cols = everything()) %>% 
       mutate("Param"=names(MR)[Ind], .before=1)
   }
