@@ -92,7 +92,7 @@ cOwnMod_US <- configureMCMC(OwnMod_US,
 params_to_remove <-  c(
   "p","drift",
   paste0("k[",1:NYear,"]"),
-  paste0("Y_t[",1:(NYear+1),"]"),
+  paste0("Y_t[",3:(NYear),"]"),
   paste0("b1[",1:NAge,"]"),
   paste0("b2[",1:NAge,"]"),
   "a","muY","sdY"
@@ -112,7 +112,7 @@ cOwnMod_US$addSampler(nodes = "a",type="slice")
 cOwnMod_US$addSampler(nodes = "sdY",type="slice")
 
 # slice sampler for Y_t
-for(j in 3:(NYear+1)){ #one time period longer due to differencing
+for(j in 3:(NYear)){ 
   cOwnMod_US$addSampler(target=paste0("Y_t[",j,"]"),
                           type="slice")
 }
@@ -259,7 +259,7 @@ cOwnMod_It <- configureMCMC(OwnMod_It,
 params_to_remove <-  c(
   "p","drift",
   paste0("k[",1:NYear,"]"),
-  paste0("Y_t[",1:(NYear+1),"]"),
+  paste0("Y_t[",3:(NYear),"]"),
   paste0("b1[",1:NAge,"]"),
   paste0("b2[",1:NAge,"]"),
   "a","muY","sdY"
@@ -278,7 +278,7 @@ cOwnMod_It$addSampler(nodes = "a",type="slice")
 cOwnMod_It$addSampler(nodes = "sdY",type="slice")
 
 # slice sampler for Y_t
-for(j in 3:(NYear+1)){ #one time period longer due to differencing
+for(j in 3:(NYear)){ #one time period longer due to differencing
   cOwnMod_It$addSampler(target=paste0("Y_t[",j,"]"),
                         type="slice")
 }
@@ -296,9 +296,9 @@ comOwnMod_It <- compileNimble(OwnMod_It,
                               bOwnMod_It)
                                       
 SamplesOwn_It <- runMCMC(comOwnMod_It$bOwnMod_It,
-                         niter = 17500,
+                         niter = 15000,
                          thin=10,
-                         nburnin = 7500,
+                         nburnin = 5000,
                          nchains = 2)
                                         
 SummaryOutput(SamplesOwn_It, params=c("beta","betaJump",
@@ -424,7 +424,7 @@ cOwnMod_Sp <- configureMCMC(OwnMod_Sp,
 params_to_remove <-  c(
   "p","drift",
   paste0("k[",1:NYear,"]"),
-  paste0("Y_t[",1:(NYear+1),"]"),
+  paste0("Y_t[",3:(NYear),"]"),
   paste0("b1[",1:NAge,"]"),
   paste0("b2[",1:NAge,"]"),
   "a","muY","sdY"
@@ -443,7 +443,7 @@ cOwnMod_Sp$addSampler(nodes = "muY",type="slice")
 cOwnMod_Sp$addSampler(nodes = "a",type="slice")
 cOwnMod_Sp$addSampler(nodes = "sdY",type="slice")
 # slice sampler for Y_t
-for(j in 3:(NYear+1)){ #one time period longer due to differencing
+for(j in 3:(NYear)){ #one time period longer due to differencing
   cOwnMod_Sp$addSampler(target=paste0("Y_t[",j,"]"),
                         type="slice")
 }
