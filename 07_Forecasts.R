@@ -162,7 +162,16 @@ FutureValuesVecQuantile_Sp_Freq <-
   ggdist::point_interval(Rate, .width = c(0.9)) #90% PI only
 
 ########### 2.3 Plot Both togethers ############################################
-#Observed Data Frame ; for plotting needed only
+
+# Recalculate Quantiles, though only 90, 95 and 99 % 
+FutureValuesVecQuantile_Sp <- 
+  FutureLambdaVecIt_Sp %>% 
+  group_by(AgeGroup,Year) %>% 
+  mutate("logRate"=log(Rate)) %>% 
+  ggdist::point_interval(Rate, .width = c(0.9,0.95,0.99)) 
+
+
+#Observed Data Frame with recalculated Quantiles ; for plotting needed only
 ObservedValuesVec2_Sp <- 
   LambdaVecSp %>% 
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
@@ -179,13 +188,13 @@ FutureValuesVecQuantile_Sp <-
   FutureValuesVecQuantile_Sp %>% 
   full_join(x = filter(ObservedValuesVec2_Sp, Year == max(Year)),
             y =. ) %>% #add last year, so that there is no space in plot 
-  mutate(Type ="FC") %>% 
+  mutate(Type ="FC") %>% #Add all of the observed Values
   full_join(x = filter(ObservedValuesVec2_Sp),
             y =. )
 
 #Add Observed Values to Quantiles for Plotting
 FutureValuesVecQuantile_Sp_Freq <-
-  FutureValuesVecQuantile_Sp_Freq
+  FutureValuesVecQuantile_Sp_Freq %>% 
   mutate(Type ="FC",
          Model="LC") %>% 
   full_join(x = filter(ObservedValuesVec2_Sp,
@@ -196,7 +205,7 @@ FutureValuesVecQuantile_Sp_Freq <-
          Type = "Mean FC Freq") 
 
 
-  AgeFilter <- c("45-54","55-64","65-74","75-84")
+AgeFilter <- c("45-54","55-64","65-74","75-84")
 
 ### Add layer after layer, 
 theme_set(theme_minimal(base_size = 10))
