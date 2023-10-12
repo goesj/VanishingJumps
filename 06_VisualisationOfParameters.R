@@ -430,14 +430,14 @@ OtherParamPlotIt <-
 cowplot::plot_grid(BetaParamIt, OtherParamPlotIt, byrow = FALSE, nrow = 2,
                    rel_heights = c(1.4,1)) #making first plot 1.4 times as high
 
-#### 2. Visualization UK WAR DATA ###############################################
+### 2. Visualization UK WAR DATA ###############################################
 load(file = file.path(getwd(),"Results/Samples_UKWar.RData"))
 
 #Total Samples
 SamplesLiuLi_Tot <- do.call(rbind, 
                             SamplesLiuLi_War) 
 
-######### 2.1 Comparison Liu-Li Freq vs. Liu-Li Bayesian estimates #############
+###### 2.1 Comparison Liu-Li Freq vs. Liu-Li Bayesian estimates #############
 #Parameters to visualizse
 Params <- c("beta","betaJump","muY","sdY","p",
             "drift","sigma_time","sigma_eps")
@@ -557,6 +557,10 @@ cowplot::plot_grid(BetaParamPlotRibbon, OtherParamPlot, byrow = FALSE, nrow = 2,
 
 
 ######## 2.2. Jump Occurence WAR ############################################
+#Total Samples
+SamplesOwn_Tot <- do.call(rbind, 
+                            Samples_OwnMod_UK) 
+
 # Circular Plot for Jump occurence 
 #Code taken from R graph gallery
 DataCircle <- SamplesLiuLi_Tot %>% 
@@ -595,7 +599,8 @@ DataCircle <- DataCircle %>%
 DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),
                                         1914:1919,seq(1921,1939,2),
                                         1940:1945,seq(1947,2010,2))] <- NA
-  ggplot(DataCircle, aes(x=id, y=PostMean)) +  
+
+ggplot(DataCircle, aes(x=id, y=PostMean)) +  
   geom_bar(aes(fill ="UK"),stat="identity",position = "dodge", width = 0.5)+
   scale_fill_manual(name="", values="#08519c")+
   geom_rect(aes(
@@ -605,16 +610,15 @@ DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),
   ylim(-1,1.6) +
   geom_hline(aes(yintercept = Constant), color = "grey60") +
   geom_hline(aes(yintercept = Constant+1), color = "grey60") +
-  ggtitle("a.) Jump Occurence War Data")+
   theme(
     axis.text = element_blank(),
     axis.title = element_blank(),
     panel.grid = element_blank(),
-    legend.position = c(0.5,0.5),
+    legend.position = "none",
     legend.text = element_text(size = 18),
     plot.title = element_text(hjust = 0.5, size = 20,
                               vjust = -10), #adjust position of title
-    plot.margin=unit(c(-1.5,-1.5,-1.5,-1.5), "cm") #remove Margins from plot
+    plot.margin=unit(c(-2.68,-2.5,-2.5,-2.5), "cm") #remove Margins from plot
   ) +
   coord_polar(start = 0) + # This makes the coordinate polar instead of cartesian.
   # Add the labels, using the label_data dataframe that we have created before
