@@ -48,8 +48,151 @@ LambdaMatUS <- matrix(LambdaVecUs$Rate,
 #Differenced Log Death Rates
 ZMatUS <- apply(log(LambdaMatUS), 1, diff) %>% t()
 
+# Provisional Data United States #####
+#Death Data from NCHS (https://data.cdc.gov/NCHS/Provisional-COVID-19-Death-Counts-by-Age-in-Years-/3apk-4u4f)
+#Population Data from US Census (https://www.census.gov/data/tables/time-series/demo/popest/2020s-national-detail.html) 
+Death_US_22 <- read.csv2(file = file.path(getwd(),"Data/ProvisionalDeathsWeeklyUS.csv"),
+                         sep=",", dec = ".", header = TRUE,
+                         comment.char = "")
 
-######### 1.2. Italy ############################################################
+#Filter only Weeks in 2022
+Deaths_US_22_Grouped <- 
+  Death_US_22 %>% 
+  filter(grepl("2022", End.Week)) %>% #only 2022
+  mutate(Age.Group = forcats::fct_inorder(factor(Age.Group))) %>% 
+  filter(Sex == "All Sex") %>% #only both sexes
+  group_by(Age.Group) %>% 
+  summarise(Deaths=sum(Total.Deaths)) %>% #sum over age groups 
+  filter(Age.Group != "All Ages") %>% #remove Total 
+  mutate("NewAgeInd"=c(1,1,2:10)) %>% #Combine first two ages
+  group_by(NewAgeInd) %>% #Group over new Age groups
+  summarise(Deaths = sum(Deaths)) %>% #sum to add both Age groups of 1 together
+  mutate("Year"=2022)
+
+
+
+Pop_US_2022 <- openxlsx::read.xlsx(xlsxFile = 
+                                     file.path(getwd(),"Data/US_MidYearPop2022.xlsx"),
+                                   sheet = "MidYearPop",startRow = 3)
+
+#Age Groups of <5, 5-14, 15-24,..., 85+
+Pop_US_2022_Grouped <- 
+  Pop_US_2022 %>% 
+  select(Age,Both.Sexes) %>%
+  filter(Age != "Total") %>% 
+  mutate("NewAgeInd"= c(1,rep(2:9,each=2),10)) %>% 
+  group_by(NewAgeInd) %>% 
+  summarise(Pop=sum(Both.Sexes)) %>% 
+  mutate("Year"=2022)
+
+US_2022_Dat <- left_join(Pop_US_2022_Grouped,
+                         Deaths_US_22_Grouped,
+                         by=c("NewAgeInd","Year")) %>% 
+  mutate("TInd"=42) %>% 
+  select(NewAgeInd, Year, Deaths, Pop, TInd) #Reorder Columns
+
+
+TotalDataUS <- rbind(TotalDataUS,
+                     US_2022_Dat) #add 2022 Data
+
+
+LambdaVecUs <- TotalDataUS %>% mutate("Rate"=Deaths/Pop) %>% 
+  mutate("ZVal"=c(NA,diff(log(Rate))))%>% 
+  arrange(Year)
+
+LambdaMatUS <- matrix(LambdaVecUs$Rate,
+                      nrow = length(unique(LambdaVecUs$NewAgeInd)), 
+                      byrow = FALSE)
+
+#Differenced Log Death Rates
+ZMatUS <- apply(log(LambdaMatUS), 1, diff) %>% t()
+
+
+
+############ 1.2. Spain ########################################################
+#For Spain all the needed Data is available at Eurostat. No HMD needed
+Deaths_Sp_EU <- openxlsx::read.xlsx(xlsxFile = 
+                                      file.path(getwd(),"Data/DeathsSpain_Eurostat.xlsx"),
+                                    startRow = 9, sheet = 3, na.strings = ":")
+
+DeathsSp_Eu22_We <- openxlsx::read.xlsx(xlsxFile = 
+                                          file.path(getwd(),"Data/WeeklyDeaths2022_It_Fr_Sp.xlsx"),
+                                        startRow = 25, sheet = "SpainTotal")
+
+PopIt_EU <- openxlsx::read.xlsx(xlsxFile = 
+                                  file.path(getwd(),"Data/PopulationSpain_Eurostat.xlsx"),
+                                startRow = 9, sheet = 3, na.strings = ":")
+
+HelperAgeLab <- AgeLabFun_EU(AgeLabels = Deaths_Sp_EU$`AGE.(Labels)`)
+
+DeathsSP_EU21 <- Deaths_Sp_EU %>% 
+  filter(`AGE.(Labels)`!= "Total") %>% #remove total age group 
+  pivot_longer(.,                      #transform into long format 
+               cols = 3:ncol(Deaths_Sp_EU), 
+               names_to = "Year", 
+               values_to = "Deaths") %>% 
+  mutate("AInd"=match(`AGE.(Labels)`, unique(`AGE.(Labels)`))) %>% #Get Age ID
+  mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
+  group_by(NewAgeInd,Year) %>% #group by new Age ID
+  summarise(across(Deaths,sum)) %>% 
+  filter(Year >1980) %>% 
+  mutate(Year = as.numeric(Year)) # transform year into numeric
+
+
+## Add Deaths of Year 2022 of provisional Yearly Data from EuroStat
+DeathsSp_Eu22 <- DeathsSp_Eu22_We %>% 
+  mutate("NewAgeInd"= AgeLabFun_EU22()) %>% 
+  group_by(NewAgeInd) %>% 
+  summarise("Deaths"=sum(Total)) %>% 
+  mutate("Year" = 2022)
+
+
+DeathsGroupedSp_EU <- dplyr::full_join(x=DeathsSP_EU21,
+                                       y = DeathsSp_Eu22, 
+                                       by=c("NewAgeInd","Year","Deaths"),
+                                       na_matches="never")
+
+## Get Exposure. Value is based on annual (January 1st) population estimates
+PopSp_EU <- openxlsx::read.xlsx(xlsxFile = 
+                                  file.path(getwd(),"Data/PopulationSpain_Eurostat.xlsx"),
+                                startRow = 9, sheet = 3, na.strings = ":")
+
+#Select Year from 1981 onward
+PopGrouped_EU_Sp <- PopSp_EU %>% 
+  select(c(1,2,as.character(1981:2022))) %>% 
+  filter(`AGE.(Labels)`!= "Total") %>% #remove total age group
+  pivot_longer(.,                      #transform into long format 
+               cols = 3:ncol(.), 
+               names_to = "Year", 
+               values_to = "Pop") %>% 
+  mutate("AInd"=match(`AGE.(Labels)`, unique(`AGE.(Labels)`))) %>% #Get Age ID
+  mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
+  group_by(NewAgeInd,Year) %>% #group by new Age ID
+  summarise(across(Pop,sum)) %>% 
+  mutate("Year"=as.numeric(Year)) # transform year into integer
+
+
+#### Total Data (add both datasets together)
+TotDataSp <- dplyr::left_join(x = DeathsGroupedSp_EU,
+                              y = PopGrouped_EU_Sp, 
+                              by =c("NewAgeInd","Year"),
+                              na_matches="never")
+
+LambdaVecSp <- TotDataSp %>% 
+  mutate("Rate"=Deaths/Pop) %>% 
+  mutate("ZVal"=c(NA,diff(log(Rate)))) %>% 
+  arrange(Year)
+
+
+## Creation of Z Matrix 
+LambdaMatSp <- matrix(LambdaVecSp$Rate,
+                      nrow = length(unique(LambdaVecSp$NewAgeInd)),
+                      byrow = FALSE)
+
+#Differenced Log Death Rates
+ZMatSp <- apply(log(LambdaMatSp), 1, diff) %>% t()
+
+######### 1.3. Italy ############################################################
 ## Problem: HMD DATA only available until 2019, though Eurostat has Data for 2022.
 # Solution: Merge both DataSets
 
@@ -178,92 +321,6 @@ LambdaMatIt <- matrix(LambdaVecIt$Rate,
 
 #Differenced Log Death Rates (Creation of Z Matrix )
 ZMatIt <- apply(log(LambdaMatIt), 1, diff) %>% t()
-
-
-
-############ 1.3. Spain ########################################################
-#For Spain all the needed Data is available at Eurostat. No HMD needed
-Deaths_Sp_EU <- openxlsx::read.xlsx(xlsxFile = 
-                                      file.path(getwd(),"Data/DeathsSpain_Eurostat.xlsx"),
-                                    startRow = 9, sheet = 3, na.strings = ":")
-
-DeathsSp_Eu22_We <- openxlsx::read.xlsx(xlsxFile = 
-                                          file.path(getwd(),"Data/WeeklyDeaths2022_It_Fr_Sp.xlsx"),
-                                        startRow = 25, sheet = "SpainTotal")
-
-PopIt_EU <- openxlsx::read.xlsx(xlsxFile = 
-                                  file.path(getwd(),"Data/PopulationSpain_Eurostat.xlsx"),
-                                startRow = 9, sheet = 3, na.strings = ":")
-
-HelperAgeLab <- AgeLabFun_EU(AgeLabels = Deaths_Sp_EU$`AGE.(Labels)`)
-
-
-DeathsSP_EU21 <- Deaths_Sp_EU %>% 
-  filter(`AGE.(Labels)`!= "Total") %>% #remove total age group 
-  pivot_longer(.,                      #transform into long format 
-               cols = 3:ncol(Deaths_Sp_EU), 
-               names_to = "Year", 
-               values_to = "Deaths") %>% 
-  mutate("AInd"=match(`AGE.(Labels)`, unique(`AGE.(Labels)`))) %>% #Get Age ID
-  mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
-  group_by(NewAgeInd,Year) %>% #group by new Age ID
-  summarise(across(Deaths,sum)) %>% 
-  filter(Year >1980) %>% 
-  mutate(Year = as.numeric(Year)) # transform year into numeric
-
-
-## Add Deaths of Year 2022 of provisional Yearly Data from EuroStat
-DeathsSp_Eu22 <- DeathsSp_Eu22_We %>% 
-  mutate("NewAgeInd"= AgeLabFun_EU22()) %>% 
-  group_by(NewAgeInd) %>% 
-  summarise("Deaths"=sum(Total)) %>% 
-  mutate("Year" = 2022)
-
-
-DeathsGroupedSp_EU <- dplyr::full_join(x=DeathsSP_EU21,
-                                       y = DeathsSp_Eu22, 
-                                       by=c("NewAgeInd","Year","Deaths"),
-                                       na_matches="never")
-
-## Get Exposure. Value is based on annual (January 1st) population estimates
-PopSp_EU <- openxlsx::read.xlsx(xlsxFile = 
-                                  file.path(getwd(),"Data/PopulationSpain_Eurostat.xlsx"),
-                                startRow = 9, sheet = 3, na.strings = ":")
-
-#Select Year from 1981 onward
-PopGrouped_EU_Sp <- PopSp_EU %>% 
-  select(c(1,2,as.character(1981:2022))) %>% 
-  filter(`AGE.(Labels)`!= "Total") %>% #remove total age group
-  pivot_longer(.,                      #transform into long format 
-               cols = 3:ncol(.), 
-               names_to = "Year", 
-               values_to = "Pop") %>% 
-  mutate("AInd"=match(`AGE.(Labels)`, unique(`AGE.(Labels)`))) %>% #Get Age ID
-  mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
-  group_by(NewAgeInd,Year) %>% #group by new Age ID
-  summarise(across(Pop,sum)) %>% 
-  mutate("Year"=as.numeric(Year)) # transform year into integer
-
-
-#### Total Data (add both datasets together)
-TotDataSp <- dplyr::left_join(x = DeathsGroupedSp_EU,
-                              y = PopGrouped_EU_Sp, 
-                              by =c("NewAgeInd","Year"),
-                              na_matches="never")
-
-LambdaVecSp <- TotDataSp %>% 
-  mutate("Rate"=Deaths/Pop) %>% 
-  mutate("ZVal"=c(NA,diff(log(Rate)))) %>% 
-  arrange(Year)
-
-
-## Creation of Z Matrix 
-LambdaMatSp <- matrix(LambdaVecSp$Rate,
-                      nrow = length(unique(LambdaVecSp$NewAgeInd)),
-                      byrow = FALSE)
-
-#Differenced Log Death Rates
-ZMatSp <- apply(log(LambdaMatSp), 1, diff) %>% t()
 
 
 ### 1.4 Save all data ##########################################################
