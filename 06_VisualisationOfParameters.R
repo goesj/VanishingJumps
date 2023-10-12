@@ -46,7 +46,7 @@ SampleDensPlot <- function(Samples, Parameter = p){
       mutate("Country" = factor(Country, 
                                 levels = c("Italy","Spain","United States"))) %>% 
       ggplot(aes(x = .data[[Parameter]],   #select parameter for x 
-                         y = Country))+    #change here parameter to sample
+                 y = Country))+    #change here parameter to sample
       ggdist::stat_slabinterval(aes(fill_ramp=after_stat(level),
                                     fill=Country,color=Country),
                                 geom="slabinterval",
