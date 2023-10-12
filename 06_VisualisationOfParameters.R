@@ -75,7 +75,7 @@ SampleDensPlot <- function(Samples, Parameter = p){
 
 
 #Create plot select one of a, p, muY, and sdY for Parameter
-SampleDensPlot(Samples = SamplesTotal, Parameter =  "muY")
+SampleDensPlot(Samples = SamplesTotal, Parameter =  "sdY")
 
 
 ########## 1.3. Jump Visualisation #############################################
@@ -156,7 +156,7 @@ BetaParamUS <- SamplesUSSingle %>%
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
   mutate("AgeGroup"=rep(AgeVecCovid,2*nrow(SamplesUSSingle)),#Create Age Group Variable
          "Type"=rep(c(rep("Norm",10),rep("Jump",10)),nrow(SamplesUSSingle))
-  ) %>% mutate("Type"=factor(Type, 
+  ) %>% mutate("Type"=factor(Type, #Plot Variables by Type
                         levels = c("Norm","Jump"),
                         labels = c(expression(beta[x]),expression(beta[x]^{(J)}))),
           "AgeGroup"=factor(AgeGroup, levels = AgeVecCovid)) %>% #Change to factor 
@@ -196,7 +196,7 @@ OtherParamPlotUS <-
   SamplesUSSingle %>% 
   select(all_of(Ind)) %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
-  mutate("Type" = factor(rep(
+  mutate("Type" = factor(rep( #Plot Variables by Type (for facet_wrap)
     c(rep("Jump Intensity",2),rep("Shock Params",2),rep("Error RW",1),
       rep("Drift",1),"Error Term"),
     nrow(SamplesUSSingle)),
@@ -208,10 +208,10 @@ OtherParamPlotUS <-
                     expression(p), expression(sigma[xi]),
                     expression(d),expression(sigma[r])))) %>% 
   # # add y min a y max by group
-  mutate("ymin"=rep(c(rep(0.25,2),rep(0,2),rep(0.1,1), 
-                      rep(-0.2,1),rep(0.02,1)),nrow(SamplesUSSingle)),
-        "ymax"=rep(c(rep(2.25,2),rep(0.5,2),rep(0.3,1), 
-                     rep(0,1),rep(0.025,1)),nrow(SamplesUSSingle))) %>%
+  mutate("ymin"=rep(c(rep(0,2),rep(0,2),rep(0.1,1), rep(-0.2,1),rep(0.02,1)),
+                    nrow(SamplesUSSingle)),
+         "ymax"=rep(c(rep(3,2),rep(0.6,2),rep(0.3,1), rep(0,1),rep(0.025,1)),
+                    nrow(SamplesUSSingle))) %>%
   ggplot(aes(y = Val, x = Param, group = Type))+
   ggdist::stat_slabinterval(
     aes(y = Val,fill =Param, colour = after_stat(level), size = NULL),
@@ -302,10 +302,10 @@ OtherParamPlotSp <-
                                    expression(p), expression(sigma[xi]),
                                    expression(" d "),expression(sigma[r])))) %>% 
   # # add y min a y max by group 
-  mutate("ymin"=rep(c(rep(0.25,2),rep(0,2),rep(0.2,1), 
-                      rep(-0.4,1),rep(0.03,1)),nrow(SamplesUSSingle)),
-         "ymax"=rep(c(rep(2.25,2),rep(0.5,2),rep(0.4,1), 
-                      rep(-0.1,1),rep(0.04,1)),nrow(SamplesUSSingle))) %>%
+  mutate("ymin"=rep(c(rep(0,2),rep(0,2),rep(0.2,1), rep(-0.4,1),rep(0.025,1)),
+                    nrow(SamplesUSSingle)),
+         "ymax"=rep(c(rep(3,2),rep(0.5,2),rep(0.45,1), rep(-0.1,1),rep(0.04,1)),
+                    nrow(SamplesUSSingle))) %>% 
   ggplot(aes(y = Val, x = Param, group = Type))+
   ggdist::stat_slabinterval(
     aes(y = Val,fill =Param, colour = after_stat(level), size = NULL),
@@ -399,7 +399,7 @@ OtherParamPlotIt <-
                                    expression(" d "),expression(sigma[r])))) %>% 
   mutate("ymin"=rep(c(rep(0,2),rep(0,2),rep(0.15,1), 
                       rep(-0.3,1),rep(0.0275,1)),nrow(SamplesUSSingle)),
-         "ymax"=rep(c(rep(0.75,2),rep(0.35,2),rep(0.35,1), 
+         "ymax"=rep(c(rep(0.75,2),rep(0.5,2),rep(0.35,1), 
                       rep(-0.1,1),rep(0.035,1)),nrow(SamplesUSSingle))) %>%
   ggplot(aes(y = Val, x = Param, group = Type))+
   ggdist::stat_slabinterval(
