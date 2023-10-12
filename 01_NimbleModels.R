@@ -38,8 +38,8 @@ LiuLi_Model <- nimbleCode({
     J[t] <- N_t[t]*Y_t[t]
   }
   
-  p ~ dbeta(shape=1, shape2 = 25)
-  muY ~ T(dnorm(mean=0, sd=5), min = 0, max = 1000) #truncated normal
+  p ~ dbeta(shape=1, shape2 = 20)
+  muY ~ T(dnorm(mean=0, sd=4), min = 0, max = 1000) #truncated normal
   sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = 1000) #truncated normal
   
   #Prior on Age Effects
@@ -94,20 +94,26 @@ OwnModel <- nimbleCode({
   sigma_time ~ T(dnorm(mean=0, sd=1), min = 0, ) #truncated normal
   drift ~ dnorm(mean=0, sd=2) #normal
   
-  N_t[1:2] <- 0
+  #Other Time Effect
+  N_t[1:2] <- 0 #Corner Constraint on Delta J_1
   Y_t[1:2] <- 0
-  J[1:2] <- 0 #Corner Constraint on Delta J1 = 0
+  J[1:2] <- 0
   
-  for (t in 3:(N_Year+1)){ #one year longer for differencing
+  N_t[N_Year+1] <- 0 #Corner Constraint on N_T 
+  Y_t[N_Year+1] <- 0
+  
+  for (t in 3:(N_Year)){ #one year longer
     N_t[t] ~ dbern(p)
     Y_t[t] ~ dnorm(mean = muY, sd = sdY)
     J[t] <- a*J[t-1]+N_t[t]*Y_t[t]
   }
-
-  #low values are preferred
-  p ~ dbeta(shape=1, shape2 = 25)
   
-  muY ~ T(dnorm(mean=1, sd=2), min = 0, max = ) #truncated normal
+  J[N_Year+1] <- a*J[N_Year] 
+  
+  #low values are preferred
+  p ~ dbeta(shape=1, shape2 = 20)
+  
+  muY ~ T(dnorm(mean=0, sd=4), min = 0, max = ) #truncated normal
   sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = ) #truncated normal
   
   #Vanishing Parameter
