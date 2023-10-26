@@ -75,7 +75,7 @@ SampleDensPlot <- function(Samples, Parameter = p){
 
 
 #Create plot select one of a, p, muY, and sdY for Parameter
-SampleDensPlot(Samples = SamplesTotal, Parameter =  "sdY")
+SampleDensPlot(Samples = SamplesTotal, Parameter =  "a")
 
 
 ########## 1.3. Jump Visualisation #############################################
