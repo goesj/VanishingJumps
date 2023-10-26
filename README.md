@@ -26,7 +26,7 @@ There are multiple R files each requiring different packages to run.
 * `07_Forecasts`: Exemplary code for the generation of forecasts for Spain. In addition, comparison of own forecasts with those of `StMoMo` (section 6.1 of the paper).  
 
 The estimation and analysis code requires the following packages: 
-`nimble`, `tidyverse`, `rstan`, `openxlsx`, `reshape2`, `StMoMo`,`loo`
+`nimble`, `tidyverse`, `rstan`, `openxlsx`, `reshape2`, `StMoMo`,`loo`,`bayestestR`
 
 In addition, the visualizations part needs 
 `cowplot`, `ggdist`, `gghighlight`
