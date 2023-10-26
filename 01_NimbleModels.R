@@ -39,8 +39,8 @@ LiuLi_Model <- nimbleCode({
   }
   
   p ~ dbeta(shape=1, shape2 = 20)
-  muY ~ T(dnorm(mean=0, sd=4), min = 0, max = 1000) #truncated normal
-  sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = 1000) #truncated normal
+  muY ~ T(dnorm(mean=0, sd=4), min = 0, max = ) #truncated normal
+  sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = ) #truncated normal
   
   #Prior on Age Effects
   #Dirichlet as Normalized Gamma
