@@ -162,6 +162,8 @@ save(Samples_OwnMod_UK,
      SamplesLiuLi_War,
      file = file.path(getwd(),"Results/Samples_UKWar.RData"))
 
+#alternatively, load existing Samples
+load(file.path(getwd(),"Results/Samples_UKWar.RData"))
 
 ########## 3.1 Calculate WAIC Values ###########################################
 LikeMatOwn_UK <- LikelihoodMatrixFun(Samples = do.call(rbind, Samples_OwnMod_UK),
