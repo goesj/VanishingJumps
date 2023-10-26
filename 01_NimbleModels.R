@@ -25,7 +25,7 @@ LiuLi_Model <- nimbleCode({
   }
   
   k[1] <- drift #Corner constraint
-  sigma_time ~ T(dnorm(mean=0, sd=1), min = 0, ) #truncated normal
+  sigma_time ~ T(dnorm(mean=0, sd=2), min = 0, ) #truncated normal
   drift ~ dnorm(mean=0, sd=2) #normal
   
   #other time effects
@@ -58,7 +58,7 @@ LiuLi_Model <- nimbleCode({
   betaJump[1:(N_AgeGroups-1)] <- b2[1:(N_AgeGroups-1)]/sum(b2[1:N_AgeGroups])
   betaJump[N_AgeGroups] <- 1 - sum(betaJump[1:(N_AgeGroups-1)])
   
-  sigma_eps ~ T(dnorm(mean=0, sd=1), min = 0, )
+  sigma_eps ~ T(dnorm(mean=0, sd=2), min = 0, )
   
   #Putting all Parameters together
   for(x in 1:N_AgeGroups){
@@ -91,7 +91,7 @@ OwnModel <- nimbleCode({
   }
   
   k[1] <- drift #Corner constraint
-  sigma_time ~ T(dnorm(mean=0, sd=1), min = 0, ) #truncated normal
+  sigma_time ~ T(dnorm(mean=0, sd=2), min = 0, ) #truncated normal
   drift ~ dnorm(mean=0, sd=2) #normal
   
   #Other Time Effect
