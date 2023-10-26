@@ -169,7 +169,7 @@ BetaParamUS <- SamplesUSSingle %>%
   )+
   facet_wrap(~Type,nrow = 2,labeller = label_parsed)+
   scale_fill_manual(values = c("#f7ebfd","#b789b9","#98579b")) +
-  ylab("Posterior Mean")+xlab("Age Group")+
+  ylab("Posterior Value")+xlab("Age Group")+
   theme(legend.position = "none",
         axis.text = element_text(size = 20), #change size of axis text
         axis.title = element_text(size = 22),
@@ -226,7 +226,7 @@ OtherParamPlotUS <-
   scale_x_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
   scale_color_manual(values = c("#eaddeb","#b789b9","#98579b"))+
   ggdist::scale_slab_alpha_discrete(range = c(0.1, 1))+
-  ylab("Posterior Mean")+ xlab("Other Parameters")+
+  ylab("Posterior Value")+ xlab("Other Parameters")+
   geom_blank(aes(y = ymin))+geom_blank(aes(y = ymax))+
   theme(legend.position = "none",
         axis.text = element_text(size = 25), #change size of axis text
@@ -266,7 +266,7 @@ BetaParamSp <- SamplesSpSingle %>%
   )+
   facet_wrap(~Type,nrow = 2,labeller = label_parsed)+
   scale_fill_manual(values = c("#fdf2c5","#ecdc94","#c9b045")) +
-  ylab("Posterior Mean")+xlab("Age Group")+
+  ylab("Posterior Value")+xlab("Age Group")+
   theme(legend.position = "none",
         axis.text = element_text(size = 20), #change size of axis text
         axis.title = element_text(size = 22),
@@ -320,7 +320,7 @@ OtherParamPlotSp <-
   scale_x_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
   scale_color_manual(values = c("#fdf2c5","#ecdc94","#c9b045"))+
   ggdist::scale_slab_alpha_discrete(range = c(0.1, 1))+
-  ylab("Posterior Mean")+ xlab("Other Parameters")+
+  ylab("Posterior Value")+ xlab("Other Parameters")+
   geom_blank(aes(y = ymin))+geom_blank(aes(y = ymax))+
   theme(legend.position = "none",
         axis.text = element_text(size = 25), #change size of axis text
@@ -363,7 +363,7 @@ BetaParamIt <- SamplesItSingle %>%
   facet_wrap(~Type,nrow = 2,labeller = label_parsed)+
   scale_fill_manual(values = c("#d9e5dd","#a7c2af","#81a88d")) +
   #scale_interval_color_discrete(values = "#EBF90E")+ #EBF90E ,#400040
-  ylab("Posterior Mean")+xlab("Age Group")+
+  ylab("Posterior Value")+xlab("Age Group")+
   theme(legend.position = "none",
         axis.text = element_text(size = 20), #change size of axis text
         axis.title = element_text(size = 22),
@@ -415,7 +415,7 @@ OtherParamPlotIt <-
   scale_x_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
   scale_color_manual(values = c("#d9e5dd","#a7c2af","#81a88d"))+
   ggdist::scale_slab_alpha_discrete(range = c(0.1, 1))+
-  ylab("Posterior Mean")+ xlab("Other Parameters")+
+  ylab("Posterior Value")+ xlab("Other Parameters")+
   geom_blank(aes(y = ymin))+geom_blank(aes(y = ymax))+
   theme(legend.position = "none",
         axis.text = element_text(size = 25), #change size of axis text
@@ -503,7 +503,7 @@ BetaParamPlotRibbon <- SamplesLiuLi_Tot_Long %>%
   scale_fill_manual(values = c("#c6dbef","#6baed6","#08519c")) +
   geom_point(data = FreqEstLiu[1:20,], #Add Point Estimates
              aes(y = MeanEst, x = AgeGroup,group = Type), col="red")+ 
-  ylab("Posterior Mean")+xlab("Age Group")+
+  ylab("Posterior Value")+xlab("Age Group")+
   theme(legend.position = "none",
         axis.text = element_text(size = 20), #change size of axis text
         axis.title = element_text(size = 22),
@@ -537,7 +537,7 @@ SamplesLiuLi_Tot_Long %>%
   geom_point(data = FreqEstLiu[21:26,], aes(y = MeanEst, x = Param, group = Type), col="red")+
   facet_wrap(~Type, scales = "free",shrink = TRUE)+
   scale_color_manual(values = c("#4292c6","#2171b5","#08519c"))+ 
-  ylab("Posterior Mean")+ xlab("Other Parameters")+
+  ylab("Posterior Value")+ xlab("Other Parameters")+
   geom_blank(aes(y = ymin))+geom_blank(aes(y = ymax))+
   scale_x_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
   theme(legend.position = "none",
