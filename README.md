@@ -1,5 +1,5 @@
-# Bayesian mortality modelling with pandemics: a vanishing jump approach
-Hereafter, you can find the code to reproduce the results from the paper “Bayesian mortality modelling with pandemics: a vanishing jump approach” by Julius Goes, Karim Barigou and Anne Leucht.
+﻿# Bayesian mortality modelling with pandemics: a vanishing jump approach
+Hereafter, you can find the code to reproduce the results from the paper “Bayesian mortality modelling with pandemics: a vanishing jump approach” by Julius Goes, Karim Barigou and Anne Leucht (https://arxiv.org/pdf/2311.04920.pdf).
 
 ## Models 
 Our model as well as the Bayesian implementation of the Liu & Li model can be found in the R file `01_NimbleModels.R`
