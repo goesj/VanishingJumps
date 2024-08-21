@@ -9,15 +9,14 @@ USDeaths <- read.table(file = file.path(getwd(),"Data/Deaths_5x1_USA.txt"),
                        header = TRUE)
 USExp <- read.table(file = file.path(getwd(),"Data/Exposures_5x1_USA.txt"),
                     header = TRUE)
-YearMin <- 1980
+YearMin <- 1990
 
 #Put Data into correct Format
 #Create Data Frame
 #HMD Data is Age groups of 5, including 0. For Sake of comparison, create age groups of 10
 
-#Helper to Create age Groups of 0-10,10-20,20-30,...,90+
-AgeWidthType <- 1 #Age with type 1 for COVID DATA
-Helper <- AgeLabFun_HMD(Type = AgeWidthType)
+#Helper to Create age Groups of <5,5-14,15-24,...,90+
+Helper <- AgeLabFun_HMD()
 
 TotalDataUS <- data.frame("Y"=USDeaths$Total,
                           "Offset"=USExp$Total,
@@ -35,53 +34,29 @@ TotalDataUS <- data.frame("Y"=USDeaths$Total,
   rename("Pop"=Offset) %>% 
   arrange(Year)
 
+
 # Provisional Data United States #####
-#Death Data from NCHS (https://data.cdc.gov/NCHS/Provisional-COVID-19-Death-Counts-by-Age-in-Years-/3apk-4u4f)
-#Population Data from US Census (https://www.census.gov/data/tables/time-series/demo/popest/2020s-national-detail.html) 
-Death_US_22 <- read.csv2(file = file.path(getwd(),"Data/ProvisionalDeathsWeeklyUS.csv"),
-                         sep=",", dec = ".", header = TRUE,
-                         comment.char = "")
+## New Data on Wonder http://wonder.cdc.gov/mcd-icd10-provisional.html
+USProvisionalData <- read.table(file = file.path(getwd(), "Data/Provisional_Data_US_22_23_New.txt"),
+                                header = TRUE,sep = "", dec = ".", fill = TRUE, na.strings = "")
 
-#Filter only Weeks in 2022
-Deaths_US_22_Grouped <- 
-  Death_US_22 %>% 
-  filter(grepl("2022", End.Week)) %>% #only 2022
-  mutate(Age.Group = forcats::fct_inorder(factor(Age.Group))) %>% 
-  filter(Sex == "All Sex") %>% #only both sexes
-  group_by(Age.Group) %>% 
-  summarise(Deaths=sum(Total.Deaths)) %>% #sum over age groups 
-  filter(Age.Group != "All Ages") %>% #remove Total 
-  mutate("NewAgeInd"=c(1,1,2:10)) %>% #Combine first two ages
-  group_by(NewAgeInd) %>% #Group over new Age groups
-  summarise(Deaths = sum(Deaths)) %>% #sum to add both Age groups of 1 together
-  mutate("Year"=2022)
+USProvisionalData <- USProvisionalData %>% 
+  select(YearCode, Ten.Year_AgeGroups, Deaths, Population) %>% 
+  mutate("NewAgeInd"=rep(c(rep(1,2),2:10),2))
+
+## Summarise by age 
+US_22_23_Dat <- 
+  USProvisionalData %>% 
+  group_by(NewAgeInd,YearCode) %>% 
+  reframe(Deaths=sum(Deaths),
+          Pop = sum(Population)) %>% #sum over age groups 
+  rename("Year"=YearCode) %>% 
+  arrange(Year) %>% 
+  mutate("TInd"=rep(c(41,42),each = 10))
 
 
-
-Pop_US_2022 <- openxlsx::read.xlsx(xlsxFile = 
-                                     file.path(getwd(),"Data/US_MidYearPop2022.xlsx"),
-                                   sheet = "MidYearPop",startRow = 3)
-
-#Age Groups of <5, 5-14, 15-24,..., 85+
-Pop_US_2022_Grouped <- 
-  Pop_US_2022 %>% 
-  select(Age,Both.Sexes) %>%
-  filter(Age != "Total") %>% 
-  mutate("NewAgeInd"= c(1,rep(2:9,each=2),10)) %>% 
-  group_by(NewAgeInd) %>% 
-  summarise(Pop=sum(Both.Sexes)) %>% 
-  mutate("Year"=2022)
-
-US_2022_Dat <- left_join(Pop_US_2022_Grouped,
-                         Deaths_US_22_Grouped,
-                         by=c("NewAgeInd","Year")) %>% 
-  mutate("TInd"=42) %>% 
-  select(NewAgeInd, Year, Deaths, Pop, TInd) #Reorder Columns
-
-#### Total Data (add both datasets together)
 TotalDataUS <- rbind(TotalDataUS,
-                     US_2022_Dat) #add 2022 Data
-
+                     US_22_23_Dat) #add 2022 Data
 
 LambdaVecUs <- TotalDataUS %>% mutate("Rate"=Deaths/Pop) %>% 
   mutate("ZVal"=c(NA,diff(log(Rate))))%>% 
@@ -100,19 +75,21 @@ ZMatUS <- apply(log(LambdaMatUS), 1, diff) %>% t()
 #For Spain all the needed Data is available at Eurostat. No HMD needed
 Deaths_Sp_EU <- openxlsx::read.xlsx(xlsxFile = 
                                       file.path(getwd(),"Data/DeathsSpain_Eurostat.xlsx"),
-                                    startRow = 9, sheet = 3, na.strings = ":")
+                                    startRow = 9, sheet = 3, na.strings = ":") %>% 
+  slice(-nrow(.)) #remove "unknown" age group
 
-DeathsSp_Eu22_We <- openxlsx::read.xlsx(xlsxFile = 
-                                          file.path(getwd(),"Data/WeeklyDeaths2022_It_Fr_Sp.xlsx"),
-                                        startRow = 25, sheet = "SpainTotal")
+DeathsSp_Eu23_We <- openxlsx::read.xlsx(xlsxFile = 
+                                          file.path(getwd(),"Data/WeeklyDeaths2023_It_Sp.xlsx"),
+                                        startRow = 47, sheet = "SpainTotal") %>% 
+  slice(-nrow(.))
 
-PopIt_EU <- openxlsx::read.xlsx(xlsxFile = 
+PopSp_EU <- openxlsx::read.xlsx(xlsxFile = 
                                   file.path(getwd(),"Data/PopulationSpain_Eurostat.xlsx"),
                                 startRow = 9, sheet = 3, na.strings = ":")
 
 HelperAgeLab <- AgeLabFun_EU(AgeLabels = Deaths_Sp_EU$`AGE.(Labels)`)
 
-DeathsSP_EU21 <- Deaths_Sp_EU %>% 
+DeathsSP_EU22 <- Deaths_Sp_EU %>% 
   filter(`AGE.(Labels)`!= "Total") %>% #remove total age group 
   pivot_longer(.,                      #transform into long format 
                cols = 3:ncol(Deaths_Sp_EU), 
@@ -127,27 +104,22 @@ DeathsSP_EU21 <- Deaths_Sp_EU %>%
 
 
 ## Add Deaths of Year 2022 of provisional Yearly Data from EuroStat
-DeathsSp_Eu22 <- DeathsSp_Eu22_We %>% 
-  mutate("NewAgeInd"= AgeLabFun_EU22()) %>% 
-  filter(`AGE.(Codes)`!="UNK") %>% #remove unknown age group
+DeathsSp_Eu23 <- DeathsSp_Eu23_We %>% 
+  mutate("NewAgeInd"= AgeLabFun_EU23()) %>% 
   group_by(NewAgeInd) %>% 
   summarise("Deaths"=sum(Total)) %>% 
-  mutate("Year" = 2022)
+  mutate("Year" = 2023)
 
 
-DeathsGroupedSp_EU <- dplyr::full_join(x=DeathsSP_EU21,
-                                       y = DeathsSp_Eu22, 
+DeathsGroupedSp_EU <- dplyr::full_join(x=DeathsSP_EU22,
+                                       y = DeathsSp_Eu23, 
                                        by=c("NewAgeInd","Year","Deaths"),
                                        na_matches="never")
 
-## Get Exposure. Value is based on annual (January 1st) population estimates
-PopSp_EU <- openxlsx::read.xlsx(xlsxFile = 
-                                  file.path(getwd(),"Data/PopulationSpain_Eurostat.xlsx"),
-                                startRow = 9, sheet = 3, na.strings = ":")
 
 #Select Year from 1981 onward
 PopGrouped_EU_Sp <- PopSp_EU %>% 
-  select(c(1,2,as.character(1981:2022))) %>% 
+  select(c(1,2,as.character(1981:2023))) %>% 
   filter(`AGE.(Labels)`!= "Total") %>% #remove total age group
   pivot_longer(.,                      #transform into long format 
                cols = 3:ncol(.), 
@@ -180,91 +152,62 @@ LambdaMatSp <- matrix(LambdaVecSp$Rate,
 #Differenced Log Death Rates
 ZMatSp <- apply(log(LambdaMatSp), 1, diff) %>% t()
 
-######### 1.3. Italy ############################################################
-## Problem: HMD DATA only available until 2019, though Eurostat has Data for 2022.
-# Solution: Merge both DataSets
+######### 1.3. Poland ##########################################################
+#Provisional Population data from : 
+#https://stat.gov.pl/en/topics/population/population/population-size-and-structure-and-vital-statistics-in-poland-by-territorial-division-as-of-31-december,3,33.html
+Deaths_Pl_Eu <- openxlsx::read.xlsx(xlsxFile = 
+                                      file.path(getwd(),"Data/DeathsPoland_Eurostat.xlsx"),
+                                    startRow = 8, sheet = 3, na.strings = ":") %>% slice(-nrow(.))
 
-#Eurostat Death Data starts from 1985
-#Eurostat Population Data starts from 1992
+DeathsPl_Eu23_We <- openxlsx::read.xlsx(xlsxFile = 
+                                          file.path(getwd(),"Data/WeeklyDeaths_2023_Pl.xlsx"),
+                                        startRow = 1,
+                                        sheet = "PolandTotal") %>% 
+  slice(-nrow(.))
 
-#HMD Data from 1981 - 1992 respectively 1981 - 1985 for Pop/Death
-Deaths_It_Eu <- read.xlsx(xlsxFile = 
-                            file.path(getwd(),"Data/DeathsItaly_Eurostat.xlsx"),
-                          startRow = 8, sheet = 3)
-
-DeathsIt_Eu22_We <- read.xlsx(xlsxFile = 
-                                file.path(getwd(),"Data/WeeklyDeaths2022_It_Fr_Sp.xlsx"),
-                              startRow = 25, sheet = "ItalyTotal")
-
-PopIt_EU <- read.xlsx(xlsxFile = 
-                        file.path(getwd(),"Data/PopulationItaly_Eurostat.xlsx"),
-                      startRow = 8, sheet = 3)
 
 #Helper to Create age Groups of <5,5-14,15-24,...,85+
-HelperAgeLab <- AgeLabFun_EU(AgeLabels = Deaths_It_Eu$`AGE.(Labels)`)
+HelperAgeLab <- AgeLabFun_EU(AgeLabels = Deaths_Pl_Eu$`AGE.(Labels)`)
 
 
-DeathsIt_EU21 <- Deaths_It_Eu %>% 
+DeathsPl_EU22 <- Deaths_Pl_Eu %>% 
   filter(`AGE.(Labels)`!= "Total") %>% #remove total age group 
   pivot_longer(.,                      #transform into long format 
-               cols = 3:ncol(Deaths_It_Eu), 
+               cols = 3:ncol(Deaths_Pl_Eu), 
                names_to = "Year", 
                values_to = "Deaths") %>% 
   mutate("AInd"=match(`AGE.(Labels)`, unique(`AGE.(Labels)`))) %>% #Get Age ID
   mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
   group_by(NewAgeInd,Year) %>% #group by new Age ID
-  summarise(across(Deaths,sum)) %>% 
-  filter(Year >1984) %>% # data is available from 1985 onward
+  summarise("Deaths"=sum(Deaths, na.rm =TRUE)) %>% 
+  filter(Year >1989) %>% # data is available from 1998 onward
   mutate(Year = as.numeric(Year)) # transform year into numeric
 
 
 ## Add Deaths of Year 2022 of provisional Yearly Data from EuroStat
-DeathsIt_Eu22 <- DeathsIt_Eu22_We %>% 
-  mutate("NewAgeInd"= AgeLabFun_EU22()) %>% 
+DeathsPl_Eu23 <- DeathsPl_Eu23_We %>% 
+  mutate("NewAgeInd"= AgeLabFun_EU23()) %>% 
   group_by(NewAgeInd) %>% 
   summarise("Deaths"=sum(Total)) %>% 
-  mutate("Year" = 2022)
+  mutate("Year" = 2023)
 
 
-DeathsGroupedIt_EU <- dplyr::full_join(x=DeathsIt_EU21,
-                                       y = DeathsIt_Eu22, 
+DeathsPl_Tot <- dplyr::full_join(x=DeathsPl_EU22,
+                                       y = DeathsPl_Eu23, 
                                        by=c("NewAgeInd","Year","Deaths"),
                                        na_matches="never")
 
-## Get HMD Data of deaths and combine 
-DeathsIt_HMD <- read.table(file = file.path(getwd(),"Data/Deaths_5x1_Italy.txt"),
-                           header = TRUE)
-YearMin <- 1980
-
-AgeWidthType <- 1 #Age with type 1 for COVID DATA
-HelperHMD <- AgeLabFun_HMD(Type = AgeWidthType)
-
-DeathsGrouped_It_HMD <- DeathsIt_HMD %>% filter(Year > YearMin) %>% 
-  select(Year,Age,Total) %>% 
-  mutate("AInd"=match(Age, unique(Age))) %>% #Get Age ID
-  mutate("NewAgeInd"=HelperHMD$AgeNew[AInd]) %>% #add new Age ID
-  group_by(NewAgeInd,Year) %>% #group by new Age ID
-  summarise(across(Total,sum)) %>% 
-  filter(Year < 1985) %>% 
-  mutate(Deaths = Total) %>% 
-  select(NewAgeInd, Year, Deaths)
-
-DeathsIt_Tot <- full_join(x= DeathsGrouped_It_HMD, 
-                          y= DeathsGroupedIt_EU, 
-                          by=c("NewAgeInd","Year","Deaths"),
-                          na_matches="never")
-
-
 ## Get Exposure. Approximate by Population Estimate
-PopIt_EU <- read.xlsx(xlsxFile = 
-                        file.path(getwd(),"Data/PopulationItaly_Eurostat.xlsx"),
-                      startRow = 8, sheet = 3)
-PopIt_HMD <- read.table(file = file.path(getwd(),"Data/Exposures_5x1_Italy.txt"),
-                        header = TRUE)
+PopPl_EU <- openxlsx::read.xlsx(xlsxFile = 
+                                  file.path(getwd(),"Data/PopulationPoland_Eurostat.xlsx"),
+                                startRow = 8, sheet = 3, na.strings = ":")
+
+# PopPl_HMD <- read.table(file = file.path(getwd(),"Data/Exposures_5x1_Poland.txt"),
+#                         header = TRUE)
 
 #Select Year from 1993 onward
-PopGrouped_EU_It <- PopIt_EU %>% 
-  select(c(1,2,as.character(1993:2022))) %>% #from 1993 onward there is data available for 90+ years
+PopGrouped_EU_Pl <- PopPl_EU %>% 
+  select(c(1,2,as.character(1990:2020))) %>% #from 1990 onward there is data available for 90+ years
   filter(`AGE.(Labels)`!= "Total") %>% #remove total age group
   pivot_longer(.,                      #transform into long format 
                cols = 3:ncol(.), 
@@ -273,48 +216,56 @@ PopGrouped_EU_It <- PopIt_EU %>%
   mutate("AInd"=match(`AGE.(Labels)`, unique(`AGE.(Labels)`))) %>% #Get Age ID
   mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
   group_by(NewAgeInd,Year) %>% #group by new Age ID
-  summarise(across(Pop,sum)) %>% 
+  summarise("Pop"=sum(Pop, na.rm =TRUE)) %>% 
   mutate("Year"=as.numeric(Year)) # transform year into integer
 
-PopGrouped_HMD_It <- 
-  PopIt_HMD %>% filter(Year > YearMin & Year < 1993) %>% 
-  select(Year,Age,Total) %>% 
+
+#### Get Population for 2021, 2022, and 2023 from Stat.Pl 
+PopPl_StatPl <- openxlsx::read.xlsx(xlsxFile = 
+                                      file.path(getwd(),"Data/PopulationPoland_StatPl.xlsx"),
+                                    startRow = 2, sheet = "Pop23", na.strings = ":")
+
+PopGrouped_StatPl <- PopPl_StatPl %>% 
+  filter("Age"!= "Total") %>% #remove total age group
+  pivot_longer(.,                      #transform into long format 
+               cols = 2:ncol(.), 
+               names_to = "Year", 
+               values_to = "Pop") %>% 
   mutate("AInd"=match(Age, unique(Age))) %>% #Get Age ID
-  mutate("NewAgeInd"=HelperHMD$AgeNew[AInd]) %>% #add new Age ID
+  mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
   group_by(NewAgeInd,Year) %>% #group by new Age ID
-  summarise(across(Total,sum)) %>% 
-  mutate(Pop = Total) %>% 
-  select(-3)
+  summarise("Pop"=sum(Pop, na.rm =TRUE)) %>% 
+  mutate("Year"=as.numeric(Year))
 
-PopIt_Tot <- rbind(PopGrouped_HMD_It, 
-                   PopGrouped_EU_It)
-
+PopPl_Tot <- rbind(PopGrouped_EU_Pl,
+                   PopGrouped_StatPl)
 
 #### Total Data (add both datasets together)
-TotDataIt <- dplyr::left_join(x = DeathsIt_Tot,
-                              y = PopIt_Tot, 
+TotDataPl <- dplyr::left_join(x = DeathsPl_Tot,
+                              y = PopPl_Tot, 
                               by =c("NewAgeInd","Year"),
                               na_matches="never")
 
 # Only take the oldest Age Groups 
-LambdaVecIt <- TotDataIt %>% 
+LambdaVecPl <- TotDataPl %>% 
   mutate("Rate"=Deaths/Pop) %>% 
   mutate("ZVal"=c(NA,diff(log(Rate)))) %>% 
   arrange(Year)
 
-LambdaMatIt <- matrix(LambdaVecIt$Rate,
-                      nrow = length(unique(LambdaVecIt$NewAgeInd)),
+LambdaMatPl <- matrix(LambdaVecPl$Rate,
+                      nrow = length(unique(LambdaVecPl$NewAgeInd)),
                       byrow = FALSE)
 
 #Differenced Log Death Rates (Creation of Z Matrix )
-ZMatIt <- apply(log(LambdaMatIt), 1, diff) %>% t()
+ZMatPl <- apply(log(LambdaMatPl), 1, diff) %>% t()
+
 
 
 ### 1.4 Save all data ##########################################################
 save(LambdaMatUS, ZMatUS, LambdaVecUs, TotalDataUS,
-     LambdaMatIt,  ZMatIt, LambdaVecIt, TotDataIt,
      LambdaMatSp, ZMatSp, LambdaVecSp, TotDataSp,
-     file = file.path(getwd(),"Data/CovidData.RData"))
+     LambdaMatPl, ZMatPl, LambdaVecPl, TotDataPl,
+     file = file.path(getwd(),"Data/CovidData_NewData.RData"))
 
 
 
