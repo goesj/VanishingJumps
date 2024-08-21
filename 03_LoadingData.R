@@ -223,7 +223,7 @@ PopGrouped_EU_Pl <- PopPl_EU %>%
 #### Get Population for 2021, 2022, and 2023 from Stat.Pl 
 PopPl_StatPl <- openxlsx::read.xlsx(xlsxFile = 
                                       file.path(getwd(),"Data/PopulationPoland_StatPl.xlsx"),
-                                    startRow = 2, sheet = "Pop23", na.strings = ":")
+                                    startRow = 2, sheet = "Pop21-23", na.strings = ":")
 
 PopGrouped_StatPl <- PopPl_StatPl %>% 
   filter("Age"!= "Total") %>% #remove total age group
