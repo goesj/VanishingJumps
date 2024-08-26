@@ -1,5 +1,5 @@
 #### Script to load data for empirical analysis #########
-library(tidyverse);library(openxlsx);library(rstan)
+pacman::p_load("tidyverse","openxlsx")
 
 source("02_Functions.R") #needs stan 
 
@@ -99,7 +99,7 @@ DeathsSP_EU22 <- Deaths_Sp_EU %>%
   mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
   group_by(NewAgeInd,Year) %>% #group by new Age ID
   summarise(across(Deaths,sum)) %>% 
-  filter(Year >1980) %>% 
+  filter(Year >YearMin) %>% 
   mutate(Year = as.numeric(Year)) # transform year into numeric
 
 
@@ -119,7 +119,7 @@ DeathsGroupedSp_EU <- dplyr::full_join(x=DeathsSP_EU22,
 
 #Select Year from 1981 onward
 PopGrouped_EU_Sp <- PopSp_EU %>% 
-  select(c(1,2,as.character(1981:2023))) %>% 
+  select(c(1,2,as.character(1991:2023))) %>% 
   filter(`AGE.(Labels)`!= "Total") %>% #remove total age group
   pivot_longer(.,                      #transform into long format 
                cols = 3:ncol(.), 
@@ -180,7 +180,7 @@ DeathsPl_EU22 <- Deaths_Pl_Eu %>%
   mutate("NewAgeInd"=HelperAgeLab$AgeNew[AInd]) %>% #add new Age ID
   group_by(NewAgeInd,Year) %>% #group by new Age ID
   summarise("Deaths"=sum(Deaths, na.rm =TRUE)) %>% 
-  filter(Year >1989) %>% # data is available from 1998 onward
+  filter(Year >YearMin) %>% # data is available from 1998 onward
   mutate(Year = as.numeric(Year)) # transform year into numeric
 
 
@@ -207,7 +207,7 @@ PopPl_EU <- openxlsx::read.xlsx(xlsxFile =
 
 #Select Year from 1993 onward
 PopGrouped_EU_Pl <- PopPl_EU %>% 
-  select(c(1,2,as.character(1990:2020))) %>% #from 1990 onward there is data available for 90+ years
+  select(c(1,2,as.character(1991:2020))) %>% #from 1990 onward there is data available for 90+ years
   filter(`AGE.(Labels)`!= "Total") %>% #remove total age group
   pivot_longer(.,                      #transform into long format 
                cols = 3:ncol(.), 
@@ -265,7 +265,7 @@ ZMatPl <- apply(log(LambdaMatPl), 1, diff) %>% t()
 save(LambdaMatUS, ZMatUS, LambdaVecUs, TotalDataUS,
      LambdaMatSp, ZMatSp, LambdaVecSp, TotDataSp,
      LambdaMatPl, ZMatPl, LambdaVecPl, TotDataPl,
-     file = file.path(getwd(),"Data/CovidData_NewData.RData"))
+     file = file.path(getwd(),"Data/CovidData.RData"))
 
 
 
