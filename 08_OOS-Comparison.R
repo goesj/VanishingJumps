@@ -38,24 +38,26 @@ for(s in 1:S){
 }
 
 ### 1.1 Get Observed Values
-YWar <- LambdaVecWar %>% filter(Year > LastYearObs & Year <= LastYearObs+H) %>% select(Rate) %>% pull() %>% log()
-ZWar <- LambdaVecWar %>% filter(Year > LastYearObs & Year <= LastYearObs+H) %>% select(ZVal) %>% pull()
+YWar <- LambdaVecWar %>% filter(Year > LastYearObs & Year <= LastYearObs+H) %>% 
+  select(Rate) %>% pull() %>% log()
+ZWar <- LambdaVecWar %>% filter(Year > LastYearObs & Year <= LastYearObs+H) %>% 
+  select(ZVal) %>% pull()
 
 
 ##### Out of Sample
 Log_War_Z <- rbind("AR"=logs_sample(y = ZWar, 
-                                    dat = (apply(FutureZWAR_AR$Rates,3, c))) %>% sum(),
+                                    dat = apply(FutureZWAR_AR$Rates,3, c)) %>% sum(),
                    "Liu"= logs_sample(y = ZWar, 
-                                      dat = (apply(FutureZWAR_Liu$Rates,3, c))) %>% sum(),
+                                      dat = apply(FutureZWAR_Liu$Rates,3, c)) %>% sum(),
                    "MA" = logs_sample(y = ZWar, 
-                                      dat = (apply(FutureZWAR_MA$Rates,3, c))) %>% sum())
+                                      dat = apply(FutureZWAR_MA$Rates,3, c)) %>% sum())
 
 CRPS_War_Z <- rbind("AR"=crps_sample(y = ZWar, 
-                                     dat = (apply(FutureZWAR_AR$Rates,3, c))) %>% sum(),
+                                     dat = apply(FutureZWAR_AR$Rates,3, c)) %>% sum(),
                     "Liu"= crps_sample(y = ZWar, 
-                                       dat = (apply(FutureZWAR_Liu$Rates,3, c))) %>% sum(),
+                                       dat = apply(FutureZWAR_Liu$Rates,3, c)) %>% sum(),
                     "MA" = crps_sample(y = ZWar, 
-                                       dat = (apply(FutureZWAR_MA$Rates,3, c))) %>% sum())
+                                       dat = apply(FutureZWAR_MA$Rates,3, c)) %>% sum())
 
 ScoringFrame <- data.frame(#"DSS"=DSS_War,
   "LogS"=Log_War_Z,
@@ -64,13 +66,13 @@ ScoringFrame <- data.frame(#"DSS"=DSS_War,
 
 # MSE and MAE 
 MSEFrame <- data.frame(
-  "MSE"=rbind("AR"=(YWar - apply((apply(FutureLogMatArrayWar_AR,3, c)),1,mean))^2 %>% mean(),
-              "Liu"=(YWar - apply((apply(FutureLogMatArrayWar_Liu,3, c)),1,mean))^2 %>% mean(),
-              "MA"=(YWar - apply((apply(FutureLogMatArrayWar_MA,3, c)),1,mean))^2 %>% mean()
+  "MSE"=rbind("AR"=(YWar - apply(apply(FutureLogMatArrayWar_AR,3, c),1,mean))^2 %>% mean(),
+              "Liu"=(YWar - apply(apply(FutureLogMatArrayWar_Liu,3, c),1,mean))^2 %>% mean(),
+              "MA"=(YWar - apply(apply(FutureLogMatArrayWar_MA,3, c),1,mean))^2 %>% mean()
   )*100,
-  "MAE"=rbind("AR"=abs(YWar - apply((apply(FutureLogMatArrayWar_AR,3, c)),1,mean)) %>% mean(),
-              "Liu"=abs(YWar - apply((apply(FutureLogMatArrayWar_Liu,3, c)),1,mean)) %>% mean(),
-              "MA"=abs(YWar - apply((apply(FutureLogMatArrayWar_MA,3, c)),1,mean)) %>% mean()
+  "MAE"=rbind("AR"=abs(YWar - apply(apply(FutureLogMatArrayWar_AR,3, c),1,mean)) %>% mean(),
+              "Liu"=abs(YWar - apply(apply(FutureLogMatArrayWar_Liu,3, c),1,mean)) %>% mean(),
+              "MA"=abs(YWar - apply(apply(FutureLogMatArrayWar_MA,3, c),1,mean)) %>% mean()
   )*100
 ) %>% t()
 
@@ -108,22 +110,22 @@ for(s in 1:S){
 
 ##### Out of Sample
 Log_War_Z <- rbind("AR"=logs_sample(y = ZWar, 
-                                    dat = (apply(FutureZWAR_AR$Rates,3, c))) %>% sum(),
+                                    dat = apply(FutureZWAR_AR$Rates,3, c)) %>% sum(),
                    "Liu"= logs_sample(y = ZWar, 
-                                      dat = (apply(FutureZWAR_Liu$Rates,3, c))) %>% sum(),
+                                      dat = apply(FutureZWAR_Liu$Rates,3, c)) %>% sum(),
                    "MA" = logs_sample(y = ZWar, 
-                                      dat = (apply(FutureZWAR_MA$Rates,3, c))) %>% sum(),
+                                      dat = apply(FutureZWAR_MA$Rates,3, c)) %>% sum(),
                    "LC" = logs_sample(y = ZWar,
-                                      dat = (apply(FutureLogMatArrayWar_LC,3, c))) %>% sum())
+                                      dat = apply(FutureLogMatArrayWar_LC,3, c)) %>% sum())
 
 CRPS_War_Z <- rbind("AR"=crps_sample(y = ZWar, 
-                                     dat = (apply(FutureZWAR_AR$Rates,3, c))) %>% sum(),
+                                     dat = apply(FutureZWAR_AR$Rates,3, c)) %>% sum(),
                     "Liu"= crps_sample(y = ZWar, 
-                                       dat = (apply(FutureZWAR_Liu$Rates,3, c))) %>% sum(),
+                                       dat = apply(FutureZWAR_Liu$Rates,3, c)) %>% sum(),
                     "MA" = crps_sample(y = ZWar, 
-                                       dat = (apply(FutureZWAR_MA$Rates,3, c))) %>% sum(),
+                                       dat = apply(FutureZWAR_MA$Rates,3, c)) %>% sum(),
                     "LC" = crps_sample(y = YWar,
-                                       dat = (apply(FutureLogMatArrayWar_LC,3, c))) %>% sum())
+                                       dat = apply(FutureLogMatArrayWar_LC,3, c)) %>% sum())
 
 ScoringFrame <- data.frame(
   "LogS"=Log_War_Z,
@@ -132,14 +134,14 @@ ScoringFrame <- data.frame(
 
 # MSE and MAE 
 MSEFrame <- data.frame(
-  "MSE"=rbind("AR"=(YWar - apply((apply(FutureLogMatArrayWar_AR,3, c)),1,mean))^2 %>% mean(),
-              "Liu"=(YWar - apply((apply(FutureLogMatArrayWar_Liu,3, c)),1,mean))^2 %>% mean(),
-              "MA"=(YWar - apply((apply(FutureLogMatArrayWar_MA,3, c)),1,mean))^2 %>% mean(),
-              "LC"=(YWar - apply((apply(FutureLogMatArrayWar_LC,3, c)),1,mean))^2 %>% mean()
+  "MSE"=rbind("AR"=(YWar - apply(apply(FutureLogMatArrayWar_AR,3, c),1,mean))^2 %>% mean(),
+              "Liu"=(YWar - apply(apply(FutureLogMatArrayWar_Liu,3, c),1,mean))^2 %>% mean(),
+              "MA"=(YWar - apply(apply(FutureLogMatArrayWar_MA,3, c),1,mean))^2 %>% mean(),
+              "LC"=(YWar - apply(apply(FutureLogMatArrayWar_LC,3, c),1,mean))^2 %>% mean()
   )*100,
-  "MAE"=rbind("AR"=abs(YWar - apply((apply(FutureLogMatArrayWar_AR,3, c)),1,mean)) %>% mean(),
-              "Liu"=abs(YWar - apply((apply(FutureLogMatArrayWar_Liu,3, c)),1,mean)) %>% mean(),
-              "MA"=abs(YWar - apply((apply(FutureLogMatArrayWar_MA,3, c)),1,mean)) %>% mean(),
-              "LC"=abs(YWar - apply((apply(FutureLogMatArrayWar_LC,3, c)),1,mean)) %>% mean()
+  "MAE"=rbind("AR"=abs(YWar - apply(apply(FutureLogMatArrayWar_AR,3, c),1,mean)) %>% mean(),
+              "Liu"=abs(YWar - apply(apply(FutureLogMatArrayWar_Liu,3, c),1,mean)) %>% mean(),
+              "MA"=abs(YWar - apply(apply(FutureLogMatArrayWar_MA,3, c),1,mean)) %>% mean(),
+              "LC"=abs(YWar - apply(apply(FutureLogMatArrayWar_LC,3, c),1,mean)) %>% mean()
   )*100
 ) %>% t()
