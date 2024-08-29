@@ -5,7 +5,7 @@ source("01_NimbleModels.R")
 source("02_Functions.R") #loading stan 
 
 load(file = file.path(getwd(),"Data/CovidData.RData")) # Load Data
-
+nimbleOptions(doADerrorTraps=FALSE) # Remove warning
 ############# 1. UNITED STATES #################################################
 ###### 1.1 Put Data into correct form for NIMBLE ###############################
 #Create Death Matrix
@@ -17,10 +17,11 @@ NimbleConstUS <- list("N_AgeGroups"=NAge,
 
 NimbleDataUS <- list("ZMat"=ZMatUS) 
 
+
 ############# 1.2 Liu-Li Model #################################################
 LiuLi_US <-  nimbleModel(code=LiuLi_Model, 
                            constants = NimbleConstUS, 
-                           data=NimbleDataUS)
+                           data=NimbleDataUS, buildDerivs = TRUE)
 
 cLiuLi_US <- configureMCMC(LiuLi_US, 
                              print = TRUE, useConjugacy = TRUE,
