@@ -39,16 +39,27 @@ LiuLi_Model <- nimbleCode({
   }
   
   p ~ dbeta(shape=1, shape2 = 20)
+  
   muY ~ T(dnorm(mean=0, sd=4), min = 0, max = ) #truncated normal
   sdY ~ T(dnorm(mean=0, sd=2), min = 0, max = ) #truncated normal
   
   #Prior on Age Effects
   #Dirichlet as Normalized Gamma
+  # Age Effects
   for(x in 1:N_AgeGroups){
     b1[x]~ dgamma(shape = 1, rate = 1)
     b2[x]~ dgamma(shape = 1, rate = 1)
   }
+
   
+  ### For England Wales War Data ####
+  # alphaJump[1:N_AgeGroups] <- c(rep(0.5,3),5,5,4,4,rep(0.5,3))
+  # for(x in 1:N_AgeGroups){
+  #   b1[x]~ dgamma(shape = 1, rate = 1)
+  #   b2[x] ~ dgamma(shape = alphaJump[x], rate = 1)
+  # }
+
+
   # Dirichlet Distribution is standardized Gamma Dist
   beta[1:(N_AgeGroups-1)] <- b1[1:(N_AgeGroups-1)]/sum(b1[1:N_AgeGroups])
   beta[N_AgeGroups] <- 1 - sum(beta[1:(N_AgeGroups-1)])
@@ -97,16 +108,24 @@ OwnModel_AR <- nimbleCode({
   Y_t[1:2] <- 0
   J[1:2] <- 0
   
-  N_t[N_Year+1] <- 0 #Corner Constraint on N_T 
+  ### For Covid Data
+  N_t[N_Year+1] <- 0 #Corner Constraint on N_T
   Y_t[N_Year+1] <- 0
-  
+
   for (t in 3:(N_Year)){ #one year longer
     N_t[t] ~ dbern(p)
     Y_t[t] ~ T(dnorm(mean = muY, sd = sdY), min = 0, max = )
     J[t] <- a*J[t-1]+N_t[t]*Y_t[t]
   }
+
+  J[N_Year+1] <- a*J[N_Year]
   
-  J[N_Year+1] <- a*J[N_Year] 
+  ### For UK WAR data ##
+  # for (t in 3:(N_Year+1)){ #one year longer
+  #   N_t[t] ~ dbern(p)
+  #   Y_t[t] ~ T(dnorm(mean = muY, sd = sdY), min = 0, max = )
+  #   J[t] <- a*J[t-1]+N_t[t]*Y_t[t]
+  # }
   
   #low values are preferred
   p ~ dbeta(shape=1, shape2 = 20)
@@ -122,6 +141,14 @@ OwnModel_AR <- nimbleCode({
     b1[x]~ dgamma(shape = 1, rate = 1)
     b2[x]~ dgamma(shape = 1, rate = 1)
   }
+  
+  ### For England Wales War Data ####
+  # alphaJump[1:N_AgeGroups] <- c(rep(0.5,3),5,5,4,4,rep(0.5,3))
+  # for(x in 1:N_AgeGroups){
+  #   b1[x]~ dgamma(shape = 1, rate = 1)
+  #   b2[x] ~ dgamma(shape = alphaJump[x], rate = 1)
+  # }
+  # 
   
   # Dirichlet Distribution is standardized Gamma Dist
   beta[1:(N_AgeGroups-1)] <- b1[1:(N_AgeGroups-1)]/sum(b1[1:N_AgeGroups])
@@ -173,6 +200,7 @@ OwnModel_MA <- nimbleCode({
   Y_t[1:2] <- 0
   J[1:2] <- 0
   
+  ### For COVID Data ###
   N_t[N_Year+1] <- 0
   Y_t[N_Year+1] <- 0
   J[N_Year+1] <- b*N_t[N_Year]*Y_t[N_Year] #No Jump Last Year
@@ -184,8 +212,13 @@ OwnModel_MA <- nimbleCode({
     # #Multiple assignments not allowed
     J[t] <-  N_t[t]*Y_t[t]+error[t]
   }
-  # 
   
+  ### For UK WAR data ##
+  # for (t in 3:(N_Year+1)){ #one year longer
+  #   N_t[t] ~ dbern(p)
+  #   Y_t[t] ~ T(dnorm(mean = muY, sd = sdY), min = 0, max = )
+  #   J[t] <- a*J[t-1]+N_t[t]*Y_t[t]
+  # }
   
   p ~ dbeta(shape1 = 1,shape2 = 20) #low values are preferred
   
@@ -195,10 +228,19 @@ OwnModel_MA <- nimbleCode({
   
   b ~  T(dnorm(mean=0, sd=0.4), min = 0, max = 1)
   
+  # Age Effects
   for(x in 1:N_AgeGroups){
     b1[x]~ dgamma(shape = 1, rate = 1)
     b2[x]~ dgamma(shape = 1, rate = 1)
   }
+  
+  ### For England Wales War Data ####
+  # alphaJump[1:N_AgeGroups] <- c(rep(0.5,3),5,5,4,4,rep(0.5,3))
+  # for(x in 1:N_AgeGroups){
+  #   b1[x]~ dgamma(shape = 1, rate = 1)
+  #   b2[x] ~ dgamma(shape = alphaJump[x], rate = 1)
+  # }
+  # 
   
   # Dirichlet Distribution is standardized Gamma Dist
   beta[1:(N_AgeGroups-1)] <- b1[1:(N_AgeGroups-1)]/sum(b1[1:N_AgeGroups])
@@ -220,9 +262,46 @@ OwnModel_MA <- nimbleCode({
   }
 })
 
+LC_Diff <- nimbleCode({
+  
+  # Lee Carter Model differenced
+  #
+  # Time Effect (iid Normal Prior)+
+  # Age Effect (Dirichtlet Prior) +
+  # Overdispersion Parameter (normal prior)+
+  #
+  #Prior Parameterisation
+  #Priors on Time Parameters
+  #differenced random Walk 
+  for(t in 1:(N_Year)){
+    k[t] ~ dnorm(mean = drift,sd=sigma_time) #State space model formualtion
+  }
+  
+  sigma_time ~  T(dnorm(mean=0, sd=2), min = 0, ) 
+  drift ~ dnorm(mean = 0,sd = 5)
+  
+  #Dirichlet Prior
+  for(x in 1:N_AgeGroups){
+    b1[x]~ dgamma(shape = 1, rate = 1)
+  }
+  
+  # Dirichlet Distribution is standardized Gamma Dist
+  beta[1:(N_AgeGroups-1)] <- b1[1:(N_AgeGroups-1)]/sum(b1[1:N_AgeGroups])
+  beta[N_AgeGroups] <- 1 - sum(beta[1:(N_AgeGroups-1)])
+  
+  # 
+  sigma_eps ~ T(dnorm(mean=0, sd=2), min = 0, ) 
+  
+  #Putting all Parameters together
+  for(x in 1:N_AgeGroups){
+    for(t in 1:N_Year){
+      mu[x,t] <- beta[x]*k[t]
+      ZMat[x,t] ~ dnorm(mu[x,t],sd=sigma_eps)
+    }
+  }
+})
+
 ############## MULTI POPULATION MODELS #########################################
-
-
 MultiPop_AR_GlobalN <- nimbleCode({
   
   # Multi-population Version of AR model with global N_t parameter 
@@ -261,7 +340,7 @@ MultiPop_AR_GlobalN <- nimbleCode({
     a[c] ~ T(dnorm(mean=0, sd=0.4), min = 0, max = 1)
   }
  
-  p ~ dbeta(shape = 1, shape2 = 20)
+  p ~ dbeta(shape = 0.5, shape2 = 0.5)
 
   #Jump Parameters
   N_t[1:2] <- 0
@@ -276,7 +355,7 @@ MultiPop_AR_GlobalN <- nimbleCode({
     }
   }
   N_t[N_Year+1] <- 0 #Corner Constraint 
-  Y_t_Mat[N_Year+1,1:N_Country] <- 0
+  Y_t_Mat[N_Year+1, 1:N_Country] <- 0
   
   for(c in 1:N_Country){
     J_t_Mat[N_Year+1,c] <- a[c]*J_t_Mat[N_Year,c]
@@ -353,17 +432,15 @@ MultiPop_MA_GlobalN <- nimbleCode({
   
   for(c in 1:N_Country){
     sigma_time[c] ~ T(dnorm(mean=0, sd=2), min = 0,) #truncated normal
-    drift[c] ~ dnorm(mean = 0, sd = 5)
+    drift[c] ~ dnorm(mean = 0, sd = 2)
     b[c] ~ T(dnorm(mean=0, sd=0.4), min = 0, max = 1)
   }
   
-  p ~ dbeta(shape = 1, shape2 = 20)
-
+  p ~ dbeta(shape = 0.5, shape2 = 0.5)
+  
   N_t[1:2] <- 0
   Y_t_Mat[1:2,1:N_Country] <- 0
   J_t_Mat[1:2,1:N_Country] <- 0
-  
-  
   
   for (t in 3:(N_Year)){ #one year longer
     N_t[t] ~ dbern(p)
@@ -375,17 +452,18 @@ MultiPop_MA_GlobalN <- nimbleCode({
   }
   
   N_t[N_Year+1] <- 0 #Corner Constraint 
-  Y_t_Mat[N_Year+1,1:N_Country] <- 0
+  Y_t_Mat[N_Year+1, 1:N_Country] <- 0
   
   for(c in 1:N_Country){
     J_t_Mat[N_Year+1,c] <-  b[c]*N_t[N_Year]*Y_t_Mat[N_Year,c] #No Jump Last Year 
   }
   
-  
+  #Global prior
   for(c in 1:N_Country){
     muY[c] ~ T(dnorm(mean=0, sd=4), min = 0,)
     sdY[c] ~ T(dnorm(mean=0, sd=2), min = 0,) #truncated normal
   }
+  
   
   # Dirichlet Distribution is standardized Gamma Dist
   for(c in 1:N_Country){
@@ -406,7 +484,6 @@ MultiPop_MA_GlobalN <- nimbleCode({
   for(c in 1:N_Country){
     sigma_eps[c] ~ T(dnorm(mean=0, sd=2), min = 0,)
   }
-  
   
   #Putting all Parameters together
   for(c in 1:N_Country){
