@@ -1,73 +1,84 @@
 ### Visualisation  ##############
-library(nimble);library(tidyverse);library(ggdist); library(gghighlight);
-library(cowplot)
-
+pacman::p_load("nimble","tidyverse","ggdist","MCMCvis","ggpubr",
+               "cowplot","gghighlight","reshape2")
 
 source("01_NimbleModels.R")
-source("02_Functions.R") #loading stan 
+source("02_Functions.R") 
 
 
 load(file = file.path(getwd(),"Results/SamplesUS.RData"))
-load(file = file.path(getwd(),"Results/SamplesIt.RData"))
+load(file = file.path(getwd(),"Results/SamplesPl.RData"))
 load(file = file.path(getwd(),"Results/SamplesSp.RData"))
 
 
 ########### SAMPLING RESULTS####################################################
 theme_set(theme_minimal(base_size = 10)) #set global theme
 #### 1.1.1 Data Preparation ####################################################
-SamplesItSingle <- do.call(rbind, 
-                           SamplesOwn_It) %>% 
+SamplesPlSingle <- 
+  MCMCvis::MCMCchains(SamplesOwn_Pl_MA1) %>% 
   data.frame() %>% 
-  mutate(Country="Italy")
+  mutate(Country="Poland")
 
-SamplesUSSingle <- do.call(rbind, 
-                           SamplesOwn_US) %>% 
+SamplesUSSingle <- 
+  MCMCvis::MCMCchains(SamplesOwn_US_MA1) %>% 
   data.frame() %>% 
   mutate(Country="United States")
 
-SamplesSpSingle <- do.call(rbind, 
-                           SamplesOwn_Sp) %>% 
+SamplesSpSingle <- 
+  MCMCvis::MCMCchains(SamplesOwn_Sp_MA1) %>% 
   data.frame() %>% 
   mutate(Country = "Spain")
 
 
 SamplesTotal <- bind_rows(SamplesUSSingle,
                           SamplesSpSingle,
-                          SamplesItSingle)
+                          SamplesPlSingle)
 
 ######## 1.2. Parameter Density Plot ###########################################
 SampleDensPlot <- function(Samples, Parameter = p){
-  if(!Parameter %in% c("p","a","muY","sdY")){
-    print("please select one of p, a, muY or sdY")
+  if(!Parameter %in% c("p","a","muY","sdY","b")){
+    print("please select one of p, a, b,muY or sdY")
   } else  {
     Plot <- Samples %>% 
-      select(a,p,muY,sdY,Country) %>% 
+      #select(a,p,b,muY,sdY,Country) %>% 
       #Attention: Factor level is turned around, so that last factor (US) is on top
       mutate("Country" = factor(Country, 
-                                levels = c("Italy","Spain","United States"))) %>% 
+                                levels = c("Poland","Spain","United States"))) %>% 
       ggplot(aes(x = .data[[Parameter]],   #select parameter for x 
                  y = Country))+    #change here parameter to sample
       ggdist::stat_slabinterval(aes(fill_ramp=after_stat(level),
-                                    fill=Country,color=Country),
-                                geom="slabinterval",
-                                point_interval =  "mean_qi",
+                                    fill=Country),
+                                geom="slab",
+                                show_point = FALSE,
                                 slab_type = "pdf", 
-                                .width = c(.50, .85, 0.99),
-                                alpha=0.8,
-                                slab_linewidth=0.6,
-                                point_size = 2, 
-                                linewidth=2,
-                                shape=21)+
-      scale_fill_manual(values =c("#81A88D","#c9b045","#98579B"))+ #Colors for Countries
-      ggdist::scale_fill_ramp_discrete(range = c(0.2, 0.95))+
-      scale_color_manual(values=c("#355C41","#806E26","#400040"))+
-      ggdist::scale_slab_color_discrete(c("#355C41","#806E26","#400040"),
-                                        aesthetics = "slab_color",
-                                        na.translate = FALSE)+
+                                .width = c(.50, .80, 0.95))+
+      ggdist::stat_pointinterval(aes(color = Country), #point interval seperate
+                                 slab_linewidth=0.6,
+                                 point_size = 2, 
+                                 linewidth=2)+
+      scale_fill_manual(values =c("#81A88D","#c9b045","#98579B"),
+                        guide ="none")+ #Colors for Countries
+      scale_fill_ramp_discrete(na.translate = FALSE, 
+                               range = c(0.2,1))+ #drops the unnecessary NA
+      scale_color_manual(values=c("#355C41","#806E26","#400040"), #color of mean estimate
+                         guide ="none")+ # no legend
+      labs(fill_ramp = "Credible Interval")+
+      guides(fill_ramp =guide_legend(override.aes = 
+                                       list(fill = "#222222"), #darken the input of the fill aes in legend
+                                     reverse = TRUE))+
       theme(axis.text = element_text(size = 24), #change size of axis text
             axis.title = element_text(size = 25, face = "bold"),
-            legend.position = "none",
+            axis.title.x = element_text(margin = margin(t = 10)),
+            legend.position = "bottom",
+            legend.key.height = unit(0.3,"cm"), #adjust size of legend keys
+            legend.key.width = unit(0.8,"cm"),
+            legend.title = element_text(size = 20),
+            legend.text = element_text(size = 20,
+                                       margin = margin(r = 10, unit = "pt",
+                                                       l = 10)), #increase spacing of text
+            #plot.title = element_text(size = 25, face ="bold", hjust = 0.5)
       )+
+      #ggtitle(label = Parameter)+xlab("")
       ylab("")
     return(Plot)
   }
@@ -75,35 +86,35 @@ SampleDensPlot <- function(Samples, Parameter = p){
 
 
 #Create plot select one of a, p, muY, and sdY for Parameter
-SampleDensPlot(Samples = SamplesTotal, Parameter =  "a")
+SampleDensPlot(Samples = SamplesTotal, Parameter =  "b")
 
 
 ########## 1.3. Jump Visualisation #############################################
 #Plot for Visualisation of Jump Occurence
 SamplesTotal %>% 
   select(contains("N_t"),Country) %>%
-  mutate(Country = factor(Country, levels = c("United States","Spain","Italy"),
-                          labels = c("a) United States" ,"b) Spain","c) Italy"))) %>% 
+  mutate(Country = factor(Country, levels = c("United States","Spain","Poland"),
+                          labels = c("a) United States" ,"b) Spain","c) Poland"))) %>% 
   group_by(Country) %>% 
   summarise(across(.cols = where(is.numeric),.fns = mean)) %>% 
   pivot_longer(., cols = 2:ncol(.), names_to="Time", values_to = "PostMean") %>% 
   mutate(TimeFac = factor(Time, levels = unique(Time), ordered = TRUE)) %>% 
   ggplot(aes(x=TimeFac, group = Country, col = Country))+
-  geom_segment(aes(x = TimeFac, xend = TimeFac, y = 0, yend = PostMean), 
-               linewidth = 1.8)+
+  geom_segment(aes(x = TimeFac, xend = TimeFac, y = 0, yend = PostMean), linewidth = 1.8)+
   geom_point(aes(y = PostMean), size = 3, pch = 18)+
   facet_wrap(~Country, ncol = 1)+
   scale_color_manual(values=c("#98579B","#c9b045","#81A88D"))+
-  scale_x_discrete(labels = 1981:2022)+
+  scale_x_discrete(labels = 1991:2023)+
   ylab("Posterior Mean")+xlab("")+
   theme(legend.position = "none",
         axis.text = element_text(size =20), #change size of axis text
         axis.title = element_text(size = 22),
         strip.text.x=element_text(face="bold", size = 22),
         axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.grid.major.y = element_line(colour = "gray87"),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()
-        )
+  )
 
 
 ############ 1.4. Age Pattern of Mortality Jump ################################
@@ -113,8 +124,8 @@ SamplesTotal %>%
 
 SamplesTotal %>% 
   select_if(grepl(paste0(c("Country","betaJump"), collapse="|"), names(.))) %>% 
-  mutate(Country = factor(Country, levels = c("United States","Spain","Italy"),
-                          labels = c("a) United States" ,"b) Spain","c) Italy"))) %>% 
+  mutate(Country = factor(Country, levels = c("United States","Spain","Poland"),
+                          labels = c("a) United States" ,"b) Spain","c) Poland"))) %>% 
   pivot_longer(., cols = 1:10, names_to = "BetaVal",values_to = "Val") %>%  #transform into long 
   mutate(BetaVal = fct_inorder(as.factor(BetaVal),ordered = NA)) %>% 
   group_by(Country,BetaVal) %>%  #group by
@@ -125,21 +136,141 @@ SamplesTotal %>%
   geom_line(aes(y =mean, col=Country), linewidth = 0.75)+
   geom_ribbon(aes(ymin = PIL, ymax = PIU, fill = Country), alpha = 0.3)+
   gghighlight::gghighlight(use_direct_label = FALSE,
-              unhighlighted_params = list(colour = alpha("grey85", 1)))+
+                           unhighlighted_params = list(colour = alpha("grey85", 1)))+
   facet_wrap(~  Country, nrow = 3)+
   scale_fill_manual(values=c("#98579B","#c9b045","#81A88D"))+
   scale_color_manual(values=c("#2b012d","#834333","#182b1e"))+
   ylab("Posterior Value")+
   xlab("Age Group")+
-  scale_x_discrete(labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
-                                           seq(14,84,10)),"85+"))+  
-  theme(
-        axis.text = element_text(size = 20), #change size of axis text
-        axis.title = element_text(size = 22),
-        strip.text.x=element_text(face="bold", size = 22), #Text of Countries
-        legend.position = "none",
-        axis.text.x.bottom = element_text(vjust=2)
+  scale_x_discrete(labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),seq(14,84,10)),"85+"))+  
+  theme(#panel.background = element_rect(fill='gray98', colour='white'),
+    axis.text = element_text(size = 20), #change size of axis text
+    axis.title = element_text(size = 22),
+    strip.text.x=element_text(face="bold", size = 22), #Text of Countries
+    legend.position = "none",
+    axis.text.x.bottom = element_text(vjust=2)
   )
+
+########### 1.5. Jump Parameter Visualization ##################################
+# 1.5.1 Starting with hyper paramters of Y_t
+SingleParamPl <- MCMCvis::MCMCchains(SamplesOwn_Pl_MA1, params = c("muY","sdY")) %>% 
+  as.data.frame() %>% 
+  pivot_longer(., cols = 1:ncol(.), names_to = "Param", values_to = "Val") %>% 
+  mutate(Country = "Poland")
+
+SingleParamUS <- MCMCvis::MCMCchains(SamplesOwn_US_MA1, params = c("muY","sdY")) %>% 
+  as.data.frame() %>% 
+  pivot_longer(., cols = 1:ncol(.), names_to = "Param", values_to = "Val") %>% 
+  mutate(Country = "US")
+
+SingleParamSp <- MCMCvis::MCMCchains(SamplesOwn_Sp_MA1, params = c("muY","sdY")) %>% 
+  as.data.frame() %>% 
+  pivot_longer(., cols = 1:ncol(.), names_to = "Param", values_to = "Val") %>% 
+  mutate(Country = "Spain")
+
+SingleParamTotal <- rbind(SingleParamUS,
+                          SingleParamSp,
+                          SingleParamPl) %>% 
+  mutate(Param = factor(Param, 
+                        levels = c("muY","sdY"), 
+                        labels = c(expression(mu[Y]), expression(sigma[Y])))) %>%   
+  mutate("Country" = factor(Country, 
+                            levels = c("US","Spain","Poland")))
+
+BarPlotJumpParameters <- SingleParamTotal %>% 
+  ggplot(aes(x = Val, y = Param, group = Country))+
+  ggdist::stat_slabinterval(
+    aes(x = Val, color = Country, color_ramp = after_stat(level),
+        size = NULL),
+    #side = "both",
+    geom = "interval",
+    show_point = FALSE, .width = c(0.5, 0.8, 0.95), show_slab = FALSE,
+    show.legend = TRUE, position = position_dodge(width = 0.3, preserve = "total"), 
+  )+
+  stat_summary( #Add mean to plot
+    color =c("#2b012d","#2b012d",
+             "#834333","#834333",
+             "#182b1e","#182b1e"),
+    geom = "point",fun = "mean", size = 2.5,
+    pos = position_dodge(width = 0.3, preserve = "total"),
+  )+
+  scale_color_manual(values = c("#98579b","#c9b045","#81a88d"))+
+  labs(color_ramp = "Credible Interval")+ #change name of "level" title in legend
+  guides(color_ramp = guide_legend(reverse = TRUE))+ #change order of apperance in legend
+  xlab("")+ylab("")+
+  ggtitle("b)")+
+  scale_y_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
+  theme(axis.text = element_text(size = 25), #change size of axis text
+        axis.title = element_text(size = 22),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(hjust = 0.5, size = 25, face = "bold"),
+        legend.position = "bottom")+coord_flip()
+# 
+
+### 1.5.2 Next is Jump Intensity Y_t###
+SingleParamPl_Jump <- MCMCvis::MCMCchains(SamplesOwn_Pl_MA1, params = c("Y_t")) %>% 
+  as.data.frame() %>% select(30,31) %>% 
+  pivot_longer(., cols = 1:ncol(.), names_to = "Param", values_to = "Val") %>% 
+  mutate(Country = "Poland")
+
+SingleParamUS_Jump <- MCMCvis::MCMCchains(SamplesOwn_US_MA1, params = c("Y_t")) %>% 
+  as.data.frame() %>% select(30,31) %>% 
+  pivot_longer(., cols = 1:ncol(.), names_to = "Param", values_to = "Val") %>% 
+  mutate(Country = "US")
+
+SingleParamSp_Jump <- MCMCvis::MCMCchains(SamplesOwn_Sp_MA1, params = c("Y_t")) %>% 
+  as.data.frame() %>% select(30) %>% 
+  pivot_longer(., cols = 1:ncol(.), names_to = "Param", values_to = "Val") %>% 
+  mutate(Country = "Spain")
+
+SingleParamTotal_Jump <- rbind(SingleParamUS_Jump,
+                               SingleParamSp_Jump,
+                               SingleParamPl_Jump) %>% 
+  mutate(Param = factor(Param, 
+                        levels = c("Y_t[30]","Y_t[31]") , 
+                        labels = c(expression(Y[2020]), expression(Y[2021])))) %>% 
+  mutate("Country" = factor(Country, 
+                            levels = c("US","Spain","Poland")))
+
+DensityPlotJumpIntensity <- 
+  SingleParamTotal_Jump %>% 
+  ggplot(aes(x = Val, y = Param, group = Country))+
+  ggdist::stat_slabinterval(
+    aes(x = Val,
+        fill = Country, # color by Country
+        fill_ramp = after_stat(level), #Fill by Country as well
+        color = Country), # color of line underneath dist
+    side = "right",.width = c(0.5, 0.8, 0.95),
+    show_point = TRUE, show_slab = TRUE, point_interval = "mean_qi",
+    position = position_dodge(width = 0.66, preserve = "total"), 
+  )+
+  scale_fill_manual(values = c("#98579b","#c9b045","#81a88d"))+
+  scale_color_manual(values = c("#4e2b50","#655823","#3f4e44"),
+                     guide ="none")+
+  xlim(c(0,2))+
+  xlab("Posterior Value")+ylab("")+
+  ggtitle("a)")+
+  guides(level ="none")+
+  scale_y_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
+  theme(axis.text = element_text(size = 25), #change size of axis text
+        axis.title = element_text(size = 22),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(hjust = 0.5, size = 25, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = "none")+coord_flip()
+
+#Both Togehter
+ComLegend <- ggpubr::get_legend(BarPlotJumpParameters)
+
+# ggarrange for common legend
+ggpubr::ggarrange(DensityPlotJumpIntensity,
+                  BarPlotJumpParameters,
+                  common.legend = TRUE, 
+                  legend.grob = ComLegend,
+                  legend = "bottom", align = "h")
 
 
 ############ 1.5 All Parameters in one #########################################
@@ -338,16 +469,12 @@ cowplot::plot_grid(BetaParamSp, OtherParamPlotSp, byrow = FALSE, nrow = 2,
                    rel_heights = c(1.4,1)) #making first plot 1.4 times as high
 
 
-
-#####  1.5.3 Italy  #########################################################
-## 1.5.3.1 Beta Parameters 
-
+#### 1.5.3. Poland ############################################################
 AgeVecCovid <-  c("0-4",paste0(paste0(seq(5,75,10),sep="-"),seq(14,84,10)),"85+")
-
-BetaParamIt <- SamplesItSingle %>% 
+BetaParamPoland <- SamplesPlSingle %>% 
   select(grep("beta",colnames(.))) %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
-  mutate("AgeGroup"=rep(AgeVecCovid,2*nrow(SamplesItSingle)),#Create Age Group Variable
+  mutate("AgeGroup"=rep(AgeVecCovid,2*nrow(SamplesPlSingle)),#Create Age Group Variable
          "Type"=rep(c(rep("Norm",10),rep("Jump",10)),nrow(SamplesSpSingle))
   ) %>% mutate("Type"=factor(Type, 
                              levels = c("Norm","Jump"),
@@ -373,37 +500,26 @@ BetaParamIt <- SamplesItSingle %>%
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank())
 
-## 1.5.3.2 Other Parameters 
+
 OtherParams <- 
   c("muY","sdY","a","p","sigma_time","drift","sigma_eps")
 #Get Indicies of correct Parameters
 Ind <- sapply(OtherParams, 
               function(y){grep(paste0("\\<",y), #match beginning of word
-                               x = colnames(SamplesItSingle))}) %>% unlist() %>% 
+                               x = colnames(SamplesPlSingle))}) %>% unlist() %>% 
   unique() 
 
-OtherParamPlotIt <- 
-  SamplesItSingle %>% 
+OtherParamPlotPl <- 
+  SamplesPlSingle %>% 
   select(all_of(Ind)) %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
   mutate("Type" = factor(rep(
-    c(rep("Jump Intensity",2),rep("Shock Params",2),rep("Error RW",1),
-      rep("Drift",1),"Error Term"),
-    nrow(SamplesUSSingle)),
+    c(rep("Jump Intensity",2),rep("Shock Params",1),rep("Error RW",1),rep("Drift",1),"Error Term"),
+    nrow(SamplesPlSingle)),
     levels=c("Jump Intensity","Shock Params","Error RW","Drift","Error Term"))) %>%
-  mutate(Param = factor(Param,
-                        levels = unique(Param),
-                        labels = c(expression(mu[Y]),expression(sigma[Y]), 
-                                   expression(" a "),
-                                   expression(p), expression(sigma[xi]),
-                                   expression(" d "),expression(sigma[r])))) %>% 
-  mutate("ymin"=rep(c(rep(0,2),rep(0,2),rep(0.15,1), 
-                      rep(-0.3,1),rep(0.0275,1)),nrow(SamplesUSSingle)),
-         "ymax"=rep(c(rep(0.75,2),rep(0.5,2),rep(0.35,1), 
-                      rep(-0.1,1),rep(0.035,1)),nrow(SamplesUSSingle))) %>%
   ggplot(aes(y = Val, x = Param, group = Type))+
   ggdist::stat_slabinterval(
-    aes(y = Val,fill =Param, colour = after_stat(level), size = NULL),
+    aes(y = Val,fill = Param, colour = after_stat(level), size = NULL),
     geom = "interval",
     show_point = FALSE, .width = c(0.5, 0.8, 0.95), show_slab = FALSE,
     show.legend = NA
@@ -413,7 +529,7 @@ OtherParamPlotIt <-
   )+
   facet_wrap(~Type, scales = "free",shrink = TRUE, nrow = 1)+
   scale_x_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
-  scale_color_manual(values = c("#d9e5dd","#a7c2af","#81a88d"))+
+  scale_color_manual(values = c("#d9e5dd","#a7c2af","#81a88d"))+#Color Palette Blues of R Color Brewer
   ggdist::scale_slab_alpha_discrete(range = c(0.1, 1))+
   ylab("Posterior Value")+ xlab("Other Parameters")+
   geom_blank(aes(y = ymin))+geom_blank(aes(y = ymax))+
@@ -426,359 +542,187 @@ OtherParamPlotIt <-
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank())
 
-## 1.5.3.3 Other Parameters 
-cowplot::plot_grid(BetaParamIt, OtherParamPlotIt, byrow = FALSE, nrow = 2,
-                   rel_heights = c(1.4,1)) #making first plot 1.4 times as high
-
-### 2. Visualization UK WAR DATA ###############################################
-load(file = file.path(getwd(),"Results/Samples_UKWar.RData"))
+### 2. Visualization UK WAR Forecasts  #########################################
+load(file = file.path(getwd(),"Data/UKWARData.RData")) # Load Data
+load(file.path(getwd(),"Big_results/Samples_UKWar_80.RData"))
 
 #Total Samples
-SamplesLiuLi_Tot <- do.call(rbind, 
-                            SamplesLiuLi_War) 
+pacman::p_load("MCMCvis","scoringRules","truncnorm")
+S <- 20000
+H <- 30
+LastYearObs <- 1980
 
-###### 2.1 Comparison Liu-Li Freq vs. Liu-Li Bayesian estimates #############
-#Parameters to visualizse
-Params <- c("beta","betaJump","muY","sdY","p",
-            "drift","sigma_time","sigma_eps")
+#Create Forecasts 
+FutureZWAR_AR <- FutureZ(H=H, Mod = "AR", Samples = SamplesAR_War_80, S=S)
+FutureZWar_LC <- FutureZ(H=H, Mod = "Liu", LC = TRUE,
+                         Samples = SamplesLC_War_80, S=S)
 
-#Get Indicies of correct Parameters
-Ind <- sapply(Params, 
-              function(y){grep(paste0("\\<",y), #match beginning of word
-                               x = colnames(SamplesLiuLi_Tot))}) %>% unlist() %>% 
-  unique() 
+LastYearObsInd <- which(1901:2010 == LastYearObs)
 
-#Create Age Group Vector
-AgeGroupVec <- c("<1","1-4",paste0(paste0(seq(5,75,10),sep="-"),seq(14,84,10)))
-#Create data set with mean estimates of Liu,Li(2015) (frequentist estimates)
-FreqEstLiu <- data.frame("Param"=colnames(SamplesLiuLi_Tot)[Ind],
-                        "MeanEst"=c(0.1125,0.2566,0.1522,0.0665,0.072, #beta 1-5
-                                    0.0864,0.0783,0.0609,0.0579,0.0563, #beta 6-10
-                                    0,0.0722,0.0806,0.3896,0.3081, #betaJ 1-5
-                                    0.1108,0.0285,0.0106,0.0064,0, #betaJ 6-10
-                                    1.9984,1.3205,0.1338,-0.2038,0.459,0.0437),
-                        "Type"=c(rep("Norm",10),rep("Jump",10), #Needed for Plots
-                                 rep("JumpParam",2),rep("Other",3),
-                                 "Error Term"),
-                        "AgeGroup"=c(rep(AgeGroupVec,2),        #Needed for Plots
-                                     rep("Other",6))) %>% 
-  mutate(Type = factor(Type,   #Change type Variable to Factor
-                       levels = c("Norm","Jump","JumpParam","Other","Error Term"),
-                       labels = c(expression(beta[x]),
-                                  expression(beta[x]^{(J)}),
-                                  "Jump Parameters","Other", "Error Term")),
-         "AgeGroup"=factor(AgeGroup, levels = c(AgeGroupVec,"Other")),
-         Param = factor(Param,
-                  levels = Param,
-                  labels = c(paste0("beta",1:10),paste0("betaJump",1:10),
-                             expression(mu[Y]),expression(sigma[Y]),
-                           expression(p), expression(d), expression(sigma[xi]),
-                           expression(sigma[r])))) 
+FutureLogMatArrayWar_AR <- FutureLogMatArrayWar_Liu <-  FutureLogMatArrayWar_MA <- 
+  FutureLogMatArrayWar_LC <- 
+  array(data = 0,dim = c(10,H,S),
+        dimnames = list("NewAgeInd"=1:10, "FCHorizon"=1:H, "It"=1:S))
 
-#Create Long Data Frame for Plotting
-SamplesLiuLi_Tot_Long <- SamplesLiuLi_Tot %>% 
-  as.data.frame() %>% #transform into Datafram
-  select(all_of(Ind)) %>% #Select all relevant Parameters
-  pivot_longer(cols = 1:ncol(.), names_to = "Param", values_to = "Val")
-               
-  
-####  Beta Parameter with geom Ribbon 
-BetaParamPlotRibbon <- SamplesLiuLi_Tot_Long %>% 
-  filter(grepl("beta",Param)) %>% 
-  mutate("AgeGroup"=rep(AgeGroupVec,2*nrow(SamplesLiuLi_Tot)),#Create Age Group Variable
-         "Type"=rep(c(rep("Norm",10),rep("Jump",10)),nrow(SamplesLiuLi_Tot))
-  ) %>%  #transform Type into Factor Variable to allow greek facet labels
-  mutate("Type"=factor(Type, 
-                       levels = c("Norm","Jump"),
-                       labels = c(expression(beta[x]),expression(beta[x]^{(J)}))),
-         "AgeGroup"=factor(AgeGroup, levels = AgeGroupVec)) %>% #Change to factor 
-  ggplot(aes(x = AgeGroup, y = Val,group = Type))+
-  ggdist::stat_slabinterval(
-    aes(group = after_stat(level), fill = after_stat(level), size = NULL),
-    geom = "lineribbon",
-    .width = c(0.5, 0.8, .95), show_slab = FALSE,
-    show.legend = NA,
-  )+
-  facet_wrap(~Type,nrow = 2,labeller = label_parsed)+
-  scale_fill_manual(values = c("#c6dbef","#6baed6","#08519c")) +
-  geom_point(data = FreqEstLiu[1:20,], #Add Point Estimates
-             aes(y = MeanEst, x = AgeGroup,group = Type), col="red")+ 
-  ylab("Posterior Value")+xlab("Age Group")+
-  theme(legend.position = "none",
-        axis.text = element_text(size = 20), #change size of axis text
-        axis.title = element_text(size = 22),
-        axis.title.y = element_text(vjust=1.3),
-        axis.text.x = element_text(vjust=2),
-        strip.text.x=element_text(face="bold", size = 22),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank())
+for(s in 1:S){
+  FutureLogMatArrayWar_AR[,,s] <- log(LambdaMatWar)[,LastYearObsInd]+ #Last obs rate
+    t(apply(FutureZWAR_AR$Rates[,,s],1,cumsum)) #Cumsum
+  FutureLogMatArrayWar_LC[,,s] <- log(LambdaMatWar)[,LastYearObsInd]+ #Last obs rate
+    t(apply(FutureZWar_LC$Rates[,,s],1,cumsum)) #Cumsum
+}
 
-  
-#Other Parameters
-OtherParamPlot <- 
-SamplesLiuLi_Tot_Long %>% 
-  filter(!grepl("beta",Param)) %>% 
-  mutate("Type" = factor(rep(c(rep("Jump Parameters",2),rep("Other",3),"Error Term"),
-                             nrow(SamplesLiuLi_Tot)),
-                         levels=c("Jump Parameters","Other","Error Term"))) %>%
-  mutate(Param = factor(Param,
-                        levels = unique(Param),
-                        labels = c(expression(mu[Y]),expression(sigma[Y]),
-                                   expression(p), expression(d), expression(sigma[xi]),
-                                   expression(sigma[r])))) %>% 
-  # add y min a y max by group 
-  mutate("ymin"=rep(c(1,1,-0.25,-0.25,-0.25,0.04),nrow(SamplesLiuLi_Tot)),
-         "ymax"=rep(c(3.5,3.5,0.55,0.55,0.55,0.05),nrow(SamplesLiuLi_Tot))) %>%  
-  ggplot(aes(y = Val, x = Param, group = Type))+
-  ggdist::stat_interval(
-    aes(fill = Param, color_ramp = after_stat(level)),
-    .width = c(.50, .80, .95),
-  )+
-  geom_point(data = FreqEstLiu[21:26,], aes(y = MeanEst, x = Param, group = Type), col="red")+
-  facet_wrap(~Type, scales = "free",shrink = TRUE)+
-  scale_color_manual(values = c("#4292c6","#2171b5","#08519c"))+ 
-  ylab("Posterior Value")+ xlab("Other Parameters")+
-  geom_blank(aes(y = ymin))+geom_blank(aes(y = ymax))+
-  scale_x_discrete(labels = function(l) parse(text=l))+ #transforms text into expression
-  theme(legend.position = "none",
-        axis.text = element_text(size = 25), #change size of axis text
-        axis.title = element_text(size = 22),
-        axis.title.y = element_text(vjust=1.3),
-        axis.text.x = element_text(vjust=1),
-        strip.text.x = element_blank(), #remove headers of facet wrap
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank())
+# Create Helper Data Files for Plotting 
+FutureLambdaVecIt_UK_LC <- 
+  reshape2::melt(FutureLogMatArrayWar_LC, value.name = "logRate") %>% 
+  mutate(Rate = exp(logRate),
+         Type="FC",
+         Year = FCHorizon+LastYearObs) %>% 
+  mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
+                           levels = 1:10,
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+")))
 
 
+#variance of Liu,Li model higher resulting in wider PI's
+FutureLambdaVecIt_UK_AR <- 
+  reshape2::melt(FutureLogMatArrayWar_AR, value.name = "logRate") %>% 
+  mutate(Rate = exp(logRate),
+         Type="FC",
+         Year = FCHorizon+LastYearObs) %>% 
+  mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
+                           levels = 1:10,
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+")))
+
+### Get observed Values Vector
+ObservedValuesVec_UK <- 
+  LambdaVecWar %>%  #Take observed Vector and calculate PI's
+  filter(Year <= (LastYearObs+ H)) %>% 
+  mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
+                           levels = 1:10,
+                           labels =c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                  seq(14,84,10)),"85+"))) %>% 
+  group_by(AgeGroup,Year) %>% 
+  ggdist::point_interval(Rate, .width = c(0.95)) %>% 
+  mutate(Type ="Obs")
+
+### Calculate Quantiles of each forecast and add observed values to vector #####
+FutureValuesVecQuantile_UK_AR <- 
+  FutureLambdaVecIt_UK_AR %>% 
+  group_by(AgeGroup,Year) %>% 
+  mutate("logRate"=log(Rate)) %>% 
+  ggdist::point_interval(Rate, .width = c(0.95)) %>% 
+  #ggdist::point_interval(Rate, .width = c(0.8,0.95)) %>% #Quantile Calc
+  full_join(x = filter(ObservedValuesVec_UK, Year == LastYearObs),
+            y =. ) %>% #add last year, so that there is no space in plot 
+  mutate(Type ="FC",
+         Model ="AR") %>% 
+  full_join(x = filter(ObservedValuesVec_UK),
+            y =. )
+
+FutureValuesVecQuantile_UK_LC <-
+  FutureLambdaVecIt_UK_LC %>%
+  group_by(AgeGroup,Year) %>%
+  ggdist::point_interval(Rate, .width = c(0.95)) %>%
+  mutate(Type ="FC",
+         Model="LC") %>% 
+  full_join(x = filter(ObservedValuesVec_UK,
+                       .width == 0.95,
+                       Year == LastYearObs),
+            y =. ) %>% 
+  mutate(.width= 95,##Use different name for Width Column, so it gets alinged a different color
+         Type = "Mean LC") 
 
 
-cowplot::plot_grid(BetaParamPlotRibbon, OtherParamPlot, byrow = FALSE, nrow = 2,
-                   rel_heights = c(1.4,1)) #making first plot 1.4 times as high
-
-
-######## 2.2. Jump Occurence WAR ############################################
-#Total Samples
-SamplesOwn_Tot <- do.call(rbind, 
-                            Samples_OwnMod_UK) 
-
-# Circular Plot for Jump occurence 
-#Code taken from R graph gallery
-DataCircle <- SamplesLiuLi_Tot %>% 
-  data.frame() %>% 
-  select(contains("N_t")) %>%
-  summarise(across(.cols = where(is.numeric),.fns = mean)) %>% 
-  pivot_longer(., cols = 1:ncol(.), names_to="Time", values_to = "PostMean") %>%
-  mutate(Year = as.factor(1901:2010))
-
-
-#Set Number of empty labels
-emptyLabels <- 5
-to_add <- matrix(NA, emptyLabels, ncol(DataCircle))
-colnames(to_add) <- colnames(DataCircle)
-DataCircle <- rbind(DataCircle, to_add)
-DataCircle$id <- 1:nrow(DataCircle)
-
-number_of_bar <- nrow(DataCircle)
-# substract 0.5 because the letter must have the angle of the center of the bars. 
-angle <-  90 - 360 * (DataCircle$id-0.5) /number_of_bar     
-
-# calculate the alignment of labels: right or left
-# If I am on the left part of the plot, my labels have currently an angle < -90
-DataCircle$hjust<-ifelse( angle < -90, 1, 0)
-
-# flip angle BY to make them readable
-DataCircle$angle<-ifelse(angle < -90, angle+180, angle)
-
-## Add a small constant
-Constant <- 0.5
-DataCircle <- DataCircle %>% 
-  mutate("PostMean"=PostMean+Constant) %>% 
-  mutate("Jump"=ifelse(PostMean>0.5+Constant,"yes","no"))
-
-#Remove every other year. To better dead the axis labels
-DataCircle$Year[!DataCircle$Year %in% c(seq(1901,1913,2),
-                                        1914:1919,seq(1921,1939,2),
-                                        1940:1945,seq(1947,2010,2))] <- NA
-
-ggplot(DataCircle, aes(x=id, y=PostMean)) +  
-  geom_bar(aes(fill ="UK"),stat="identity",position = "dodge", width = 0.5)+
-  scale_fill_manual(name="", values="#08519c")+
-  geom_rect(aes(
-  xmin = 0, xmax = 111, ymin = 0, ymax = Constant-0.1),
-  fill = "grey97", color = "grey97"
-  )+
-  ylim(-1,1.6) +
-  geom_hline(aes(yintercept = Constant), color = "grey60") +
-  geom_hline(aes(yintercept = Constant+1), color = "grey60") +
+##### FINAL PLOT ###############################################################
+AgeFilter <- c("45-54","55-64","65-74","75-84")
+YearFilter <- c(1960:2010) 
+FutureValuesVecQuantile_UK_LC %>% 
+  filter(Year %in% YearFilter,
+         AgeGroup %in% AgeFilter) %>% 
+  ggplot(aes(x =Year, group = AgeGroup))+
+  ggdist::geom_lineribbon(aes(y = Rate, ymin = .lower,
+                              ymax = .upper,
+                              fill = interaction(.width),
+                              color = Type,
+                              linetype = Type),
+                          linewidth = 1.1, alpha = 0.65)+
+  geom_vline(xintercept = LastYearObs,linetype = "dashed", col="gray30")+
+  ggdist::geom_lineribbon(data = filter(FutureValuesVecQuantile_UK_AR,
+                                        Year %in% YearFilter,
+                                        AgeGroup %in% AgeFilter),
+                          aes(y = Rate, ymin = .lower, 
+                              ymax = .upper, 
+                              fill = interaction(.width),
+                              color = Type,
+                              linetype = Type),linewidth = 1.1, alpha = 0.65)+
+  geom_line(aes(y = Rate, x = Year, col = Type, linetype = "Mean LC"),
+            linewidth = 1.1,
+            alpha = 1)+
+  facet_wrap(~AgeGroup, scales = "free")+
+  scale_color_manual(values =c("#67000D","#011f4b","black"),
+                     labels =c("Mean AR","Mean LC","Observed"),
+                     name = "Type")+
+  scale_fill_manual(values = c("#00496F","#ED8B00"),
+                    labels = c("LC 95%","AR 95%"),
+                    name = "PI's")+
+  scale_linetype_manual(
+    values = c(1,1,6),
+    labels = c("Mean AR",
+               "Mean LC",
+               "Observed"),
+    name ="Type")+
+  ylab("Death Rate")+xlab("Year")+
   theme(
-    axis.text = element_blank(),
-    axis.title = element_blank(),
-    panel.grid = element_blank(),
-    legend.position = "none",
+    axis.text = element_text(size = 20), #change size of axis text
+    axis.title = element_text(size = 22),
+    legend.position = "bottom",
     legend.text = element_text(size = 18),
-    plot.title = element_text(hjust = 0.5, size = 20,
-                              vjust = -10), #adjust position of title
-    plot.margin=unit(c(-2.68,-2.5,-2.5,-2.5), "cm") #remove Margins from plot
-  ) +
-  coord_polar(start = 0) + # This makes the coordinate polar instead of cartesian.
-  # Add the labels, using the label_data dataframe that we have created before
-  geom_text(data=DataCircle, aes(x=id, y=PostMean+0.1, 
-                                 label=Year, 
-                                 hjust=hjust), 
-            color="black", fontface="bold",alpha=0.7, size=6, 
-            angle= DataCircle$angle, inherit.aes = FALSE)
+    legend.title = element_text(size = 20),
+    legend.key.width = unit(1.1,"cm"),
+    plot.title = element_text(hjust = 0.5, size = 20),
+    strip.text.x=element_text(face="bold", size = 22) #increase size of grouping text
+  )+
+  guides(fill = guide_legend(override.aes = list(linetype = 0)),
+         color = guide_legend(override.aes = list(fill=NA)),
+         linetype = guide_legend(override.aes = list(linewidth = 1.5))
+  )
 
-  
+
+
 # 3. Visualization of Percentage Increase ######################################
 
 #First load forecasts of own Model   
 load(file = file.path(getwd(),"Results/SamplesSp.RData")) # own Model
 load(file = file.path(getwd(),"Results/SamplesUS.RData")) # own Model
-load(file = file.path(getwd(),"Results/SamplesIt.RData")) # own Model
+load(file = file.path(getwd(),"Results/SamplesPl.RData")) # own Model
 
 #Load observed Data
 load(file = file.path(getwd(),"Data/CovidData.RData")) # Load Data
  
-#Function to generate Forecasts as well as return future Jt's 
-FutureZ_Param <- function(Samples,S ,H ,OwnMod = TRUE,NAge){
-    
-    # @H: Forecast of H time periods ahead
-    # @S: Amount of draws from the posterior
-    # @NAge: Amount of age groups in the data
-    # @Samples: Posterior Samples from nimble
-    # @OwnMod: Binary Variable to choose either Liu,Li or Own model
-    
-    #Get Random indicies from posterior. All should have the same draw 
-    PostDraw <- sample(1:nrow(Samples), 
-                       size = S, 
-                       replace = TRUE)
-    
-    #1) Generation of future kt's
-    driftVec <- Samples[PostDraw, #Select S posterior draws
-                        grep("drift",colnames(Samples))] #extract drift
-    
-    sigmaTime <- Samples[PostDraw,
-                         grep("sigma_time",colnames(Samples))]
-    
-    # generation of future kt's, for each posterior draw, generate H future kt's
-    #Row's are posterior draws, columns are time periods
-    FutureKtMat <- sapply(1:H, function(x){
-      rnorm(n = S, mean = driftVec, sd = sigmaTime)})
-    
-    #2) Generation of future Jt's (be very careful about indices..)
-      
-    #2.1) First Generation of future N'ts
-      # Note that Z1 = J2 - J1, thus ZT = JT+1 - JT, hence we have T+1 J's and N's
-      pVec <- Samples[PostDraw, #Select S posterior draws
-                      grep(paste0("\\<","p"), #starts with p to select "p" only 
-                           colnames(Samples))] 
-      
-    #Row's are posterior draws, columns are time periods,
-    #for each posterior draw, generate new N'ts
-      FutureNtMat <- sapply(1:H, function(x)rbinom(n = S,size = 1, prob = pVec))
-      
-    #Generation of R Matrix 
-      NtMatrix <- Samples[PostDraw, #Select S posterior draws
-                          grep(paste0("\\<","N"), #starts with N to select "N_t" only 
-                               colnames(Samples))] 
-      
-      
-    #Total N't Matrix (observed and future values of N_t)
-      NtTotMat <- cbind(NtMatrix,FutureNtMat)
-      
-    #2.2) Generate new Values of J't
-      muYVec <- Samples[PostDraw, #Select S posterior draws
-                        grep(paste0("\\<","muY"), #select muY 
-                             colnames(Samples))]
-      sdYVec <- Samples[PostDraw, #Select S posterior draws
-                        grep(paste0("\\<","sdY"), #select sdY 
-                             colnames(Samples))]
-      if(OwnMod != TRUE){
-        aVec <- numeric(S) #aVec filled with zeros
-      } else {
-        aVec <- Samples[PostDraw, #Select S posterior draws
-                        grep(paste0("\\<","a"), #starts with a to select "a" only 
-                             colnames(Samples))]
-      }
-      
-    #Creation of mean and sd of future J's
-    #one more column, since Zx,T = JT+1 - JT. Thus first column is JT, second JT+1 and so on
-    #First column is last "observed" JT
-      JtMat <- Samples[PostDraw, #Select S posterior draws
-                       grep(paste0("\\<","J"), #starts with N to select "N_t" only 
-                            colnames(Samples))]
-      
-      
-      FutureYt <- sapply(1:H, function(x){ 
-        rnorm(n = S, mean = muYVec, sd = sdYVec)})
-      
-      FutureJt <- matrix(data = 0,nrow = S,ncol = H+1) #one column more
-      FutureJt[,1] <- JtMat[,ncol(JtMat)]
-      
-      for(j in 2:(H+1)){ #Var(Jt)=Rt*N*sigma*N*Rt
-        h <- j-1  
-        FutureJt[,j] <- aVec*FutureJt[,j-1]+FutureNtMat[,h]*FutureYt[,h]
-      }
-      
-    #3.) Plug all together to generate new Zx,t+h
-      betaMat <- Samples[PostDraw, #Select S posterior draws
-                         grep("beta", #starts with p to select "p" only 
-                              colnames(Samples))][,1:NAge]
-      
-      betaJumpMat <- Samples[PostDraw, #Select S posterior draws
-                             grep(paste0("\\<","betaJump"), #starts with p to select "p" only 
-                                  colnames(Samples))]
-      
-      sigma_epsVec <- Samples[PostDraw, #Select S posterior draws
-                              grep(paste0("\\<","sigma_eps"), #starts with p to select "p" only 
-                                   colnames(Samples))]
-      
-      FutureZArray <- array(data = 0,dim = c(NAge,H,S),
-                            dimnames = list("Age"=1:NAge, "Time"=1:H, "It"=1:S))
-      
-      for(s in 1:S){
-        #via Matrix multiplication (outer product)
-        FutureZArray[,,s] <- 
-          betaMat[s,]%*%t(FutureKtMat[s,])+ #Normal effect
-          betaJumpMat[s,]%*%t(FutureJt[s,2:(H+1)]) - #JT+1
-          betaJumpMat[s,]%*%t(FutureJt[s,1:H]) +#JT
-          sapply(1:H, function(x){rnorm(n = NAge, 
-                                        mean = 0, sd = sigma_epsVec[s])}) #error Term
-      }
-      
-    # Next to forecasts, also return future Jt's and betaJumps
-    ReturnList <- list("Rates"=FutureZArray,
-                       "Jt"=FutureJt,
-                       "betaJump"=betaJumpMat)
-    return(ReturnList)
-}
   
 ### Calculate Future Mort Improvement Rates incl. Parameters
 S <- 10000
 H <- 50
+set.seed(42)
 
-FutureZSp <- FutureZ_Param(H=H, OwnMod = TRUE, 
-                           Samples = do.call("rbind", SamplesOwn_Sp), 
-                           S=S,NAge = 10)
-  
-FutureZUS <- FutureZ_Param(H=H, OwnMod = TRUE, 
-                           Samples = do.call("rbind", SamplesOwn_US),
-                           S=S,NAge = 10)
-  
-FutureZIt <- FutureZ_Param(H=H, OwnMod = TRUE, 
-                           Samples = do.call("rbind", SamplesOwn_It), 
-                           S=S,NAge = 10)
-  
-#Create list of all future Forecasts
+FutureZUS <-  FutureZ(H=H, Mod = "AR", Samples = SamplesOwn_US_AR, S=S)
+
+FutureZSp <- FutureZ(H=H, Mod = "AR", Samples = SamplesOwn_Sp_AR, S=S)
+
+FutureZPl <- FutureZ(H=H, Mod = "AR", Samples = SamplesOwn_Pl_AR, S=S)
+
+
 FutureZList <- list( FutureZUS,
                      FutureZSp,
-                     FutureZIt)
+                     FutureZPl)
+
 
 JumpEffectArray <- array(0, dim=c(10, H+1, S,3),
                          dimnames = list("Age"=1:10,
                                          "FC"=1:(H+1),
                                          "It"=1:S,
-                                         "Country"=c("a) US", "b) Spain","c) Italy")))
+                                         "Country"=c("a) US", "b) Spain","c) Poland")))
 for (c in 1:3) { #over countries
   for (s in 1:S) { #over Iterations
     for(x in 1:10){ #over Age
@@ -789,47 +733,113 @@ for (c in 1:3) { #over countries
 
 #Transform big Array into long format
 JumpEffectQuant <- 
-    reshape2::melt(JumpEffectArray, value.name = "logEffect") %>% 
-    mutate(AgeGroup = factor(Age,   #Change type Variable to Factor
-                             levels = 1:10,
-                             labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
-                                                     seq(14,84,10)),"85+"))) %>% 
-    group_by(FC,AgeGroup,Country) %>% 
-    ggdist::point_interval(logEffect, .width = c(0.9,0.95,0.99))
-  
+  reshape2::melt(JumpEffectArray, value.name = "logEffect") %>% 
+  mutate(AgeGroup = factor(Age,   #Change type Variable to Factor
+                           levels = 1:10,
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+"))) %>% 
+  group_by(FC,AgeGroup,Country) %>% 
+  ggdist::point_interval(logEffect, .width = c(0.9,0.95,0.99))
+
+#Jump Effect File by iteration
+JumpEffectIt <- 
+  reshape2::melt(JumpEffectArray, value.name = "logEffect") %>% 
+  mutate(AgeGroup = factor(Age,   #Change type Variable to Factor
+                           levels = 1:10,
+                           labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
+                                                   seq(14,84,10)),"85+")))
+
 
 #Calculate the actual, observed Covid Increase
 CovidIncrease <- bind_rows(mutate(LambdaVecUs, Country="a) US"),
                            mutate(LambdaVecSp, Country="b) Spain"),
-                           mutate(LambdaVecIt, Country="c) Italy")) %>% 
+                           mutate(LambdaVecPl, Country="c) Poland")) %>% 
   group_by(NewAgeInd,Country) %>% 
-  filter(Year %in% c(2019,2020)) %>% 
-  reframe("PercentageIncrease"=exp(diff(log(Rate)))) %>%  #calculation of mortality rate increase between 2019 and 2020
+  filter(Year %in% c(2016:2019,2020)) %>%
+  mutate(Period=ifelse(Year<2020,"Ref","Cov")) %>% #define reference period and Covid
+  group_by(Period, Country, NewAgeInd) %>% #group by new Period
+  reframe(Rate2 = mean(Rate)) %>%  #Caclulate the mean
+  arrange(desc(Period)) %>%  #Change order, for easier division in long format
+  group_by(NewAgeInd, Country) %>%
+  reframe("PercentageIncrease"=exp(diff(log(Rate2)))) %>%  #calculation of mortality rate increase between mean 2016:2019 and 202
   mutate(AgeGroup = factor(NewAgeInd,   #Change type Variable to Factor
                            levels = 1:10,
                            labels = c("0-4",paste0(paste0(seq(5,75,10),sep="-"),
                                                    seq(14,84,10)),"85+")),
          CovidIncrease=" ")#Empty column so it can appear in legend
 
-#Plot the Results
-JumpEffectQuant %>% 
+#Plot the Results (however in this plot legend is not correct)
+AreaPlot <- JumpEffectQuant %>% 
   group_by(AgeGroup,.width,Country) %>% 
   summarise("Perc"=mean(.upper)) %>%
+  mutate("PercIncrease"=(exp(Perc)-1)*100) %>% 
+  mutate(".width"=factor(.width, levels = c(0.99,0.95,0.9))) %>% #change order for geom area
   ggplot(aes(x=AgeGroup))+
-  geom_line(aes(y =(exp(Perc)-1)*100, group=.width, col=factor(.width),
-                #linetype = factor(.width)
-  ),
-  linewidth = 1.2)+
+  geom_area(aes(y = PercIncrease, group = .width, 
+                fill = interaction(factor(.width),Country),
+                col = interaction(factor(.width),Country)),
+            position = "identity")+
   geom_line(data = CovidIncrease, aes(x =AgeGroup, 
                                       y=(PercentageIncrease-1)*100,
-                                      group=Country, linewidth = "Covid Increase",
+                                      group=Country, 
+                                      linewidth = "Covid Increase",
                                       linetype = "Covid Increase"))+
   scale_linetype_manual(values = 2, #set linetype of Covid Increase 
                         name ="Type")+
   scale_linewidth_manual(values = 1.2, # set line width of Covid Increase
                          guide = "none")+ #remove from legend
-  scale_color_manual(values = c("#9a031e","#e36414","#023047"))+
+  scale_fill_manual(values = c("#EBDCEB","#C299C2","#98579b",
+                               "#F7EFD9","#E3CF90","#c9b045",
+                               "#E5EDE7","#B2CAB9","#81a88d"))+
+  scale_color_manual(values = c("#EBDCEB","#C299C2","#98579b",
+                                "#F7EFD9","#E3CF90","#c9b045",
+                                "#E5EDE7","#B2CAB9","#81a88d"),
+                     guide ="none")+ #remove from legend
   facet_wrap(~Country, nrow = 3, scales="free")+
+  labs(fill = "Credible Interval")+
+  ylab("Percentage Increase")+
+  xlab("Age Group")+
+  labs(col="Prediction Interval")+
+  theme(
+    axis.text = element_text(size = 20), #change size of axis text
+    axis.title = element_text(size = 22),
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 20),
+    legend.position = "none",
+    legend.key.width = unit(1.7,"cm"),
+    strip.text.x=element_text(face="bold", size = 22)
+  )+
+  guides(linetype = guide_legend(override.aes = list(linewidth = 1.3)))
+
+## Create an interval helper plot to extract the legend
+IntervalPlot <- JumpEffectIt %>% 
+  group_by(AgeGroup,Country) %>% 
+  mutate("PercIncrease"=(exp(logEffect)-1)*100) %>% 
+  ggplot(aes(x = AgeGroup, y = PercIncrease, group = Country))+
+  ggdist::stat_slabinterval(
+    aes(color = Country, color_ramp = after_stat(level),
+        size = NULL),
+    #side = "both",
+    geom = "interval",
+    show_point = FALSE, .width = c(0.9, 0.95, 0.99), show_slab = FALSE
+    #position = position_dodge(width = 0.3, preserve = "total"), 
+  )+
+  geom_point(data = CovidIncrease, aes(x = AgeGroup, 
+                                       y = (PercentageIncrease-1)*100,
+                                       group = Country))+
+  geom_line(data = CovidIncrease, aes(x =AgeGroup,
+                                      y=(PercentageIncrease-1)*100,
+                                      group=Country,
+                                      linewidth = "Covid Increase",
+                                      linetype = "Covid Increase"))+
+  scale_linetype_manual(values = 2, #set linetype of Covid Increase
+                        name ="Type")+
+  scale_linewidth_manual(values = 1.2, # set line width of Covid Increase
+                         guide = "none")+ #remove from legend
+  scale_color_manual(values = c("#98579b","#c9b045","#81a88d"),
+                     guide = "none")+
+  facet_wrap(~Country, nrow = 3, scales="free")+
+  labs(fill = "Credible Interval")+
   ylab("Percentage Increase")+
   xlab("Age Group")+
   labs(col="Prediction Interval")+
@@ -842,4 +852,16 @@ JumpEffectQuant %>%
     legend.key.width = unit(1.7,"cm"),
     strip.text.x=element_text(face="bold", size = 22)
   )+
-  guides(linetype = guide_legend(override.aes = list(linewidth = 1.3)))
+  labs(color_ramp = "Credible Interval")+
+  guides(linetype = guide_legend(override.aes = list(linewidth = 1.3))) 
+
+#extract the legend
+Legend <- ggpubr::get_legend(IntervalPlot)
+
+## Add both together
+ggpubr::ggarrange(AreaPlot,
+                  common.legend = TRUE, 
+                  legend.grob = Legend,
+                  legend = "bottom")
+
+
