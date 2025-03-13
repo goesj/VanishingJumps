@@ -7,7 +7,7 @@ The models are fitted using the **nimble** R package
 
 ## Data 
 Within the `Data` folder the following can be found: Data on deaths and exposure categorized by age groups and time periods for multiple countries. 
-The data was downloaded from both the Human Mortality Database (HMD) (https://www.mortality.org/) as well as Eurostat (https://ec.europa.eu/eurostat/data/database). 
+The data was downloaded from the Human Mortality Database (HMD) (https://www.mortality.org/), Eurostat (https://ec.europa.eu/eurostat/data/database), Statistics Poland (https://stat.gov.pl/en/topics/population/population/) and the CDC (https://wonder.cdc.gov/mcd-icd10-provisional.html) 
 
 ## Results
 Within the `Results` folder the following can be found: 
