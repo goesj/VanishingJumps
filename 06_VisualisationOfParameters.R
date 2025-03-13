@@ -1,6 +1,6 @@
 ### Visualisation  ##############
 pacman::p_load("nimble","tidyverse","ggdist","MCMCvis","ggpubr",
-               "cowplot","gghighlight","reshape2")
+               "cowplot","gghighlight","reshape2","truncnorm")
 
 source("01_NimbleModels.R")
 source("02_Functions.R") 
@@ -273,7 +273,9 @@ ggpubr::ggarrange(DensityPlotJumpIntensity,
                   legend = "bottom", align = "h")
 
 
-############ 1.5 All Parameters in one #########################################
+############ 1.5 All Parameters in one  ########################################
+
+### !! NOT IN PDF !! #####
 
 ## Creation of plot that visualizes all Parameters into one plot
 
@@ -286,8 +288,8 @@ BetaParamUS <- SamplesUSSingle %>%
   select(grep("beta",colnames(.))) %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
   mutate("AgeGroup"=rep(AgeVecCovid,2*nrow(SamplesUSSingle)),#Create Age Group Variable
-         "Type"=rep(c(rep("Norm",10),rep("Jump",10)),nrow(SamplesUSSingle))
-  ) %>% mutate("Type"=factor(Type, #Plot Variables by Type
+         "Type"=rep(c(rep("Norm",10),rep("Jump",10)),nrow(SamplesUSSingle))) %>% 
+  mutate("Type"=factor(Type, #Plot Variables by Type
                         levels = c("Norm","Jump"),
                         labels = c(expression(beta[x]),expression(beta[x]^{(J)}))),
           "AgeGroup"=factor(AgeGroup, levels = AgeVecCovid)) %>% #Change to factor 
@@ -312,20 +314,11 @@ BetaParamUS <- SamplesUSSingle %>%
 
 
 #  1.5.1.2 Other Parameters 
-
-#select Other Parameters to plot
-OtherParams <- 
-  c("muY","sdY","a","p","sigma_time","drift","sigma_eps")
-
-#Get Indicies of correct Parameters
-Ind <- sapply(OtherParams, 
-              function(y){grep(paste0("\\<",y), #match beginning of word
-                               x = colnames(SamplesUSSingle))}) %>% unlist() %>% 
-  unique() 
-
 OtherParamPlotUS <- 
-  SamplesUSSingle %>% 
-  select(all_of(Ind)) %>% 
+  MCMCvis::MCMCchains(SamplesOwn_US_MA1, params = c("muY","sdY","b",
+                                                    "p","sigma_time",
+                                                    "drift","sigma_eps")) %>% 
+  data.frame() %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
   mutate("Type" = factor(rep( #Plot Variables by Type (for facet_wrap)
     c(rep("Jump Intensity",2),rep("Shock Params",2),rep("Error RW",1),
@@ -335,7 +328,7 @@ OtherParamPlotUS <-
              "Error Term"))) %>%
   mutate(Param = factor(Param,
                         levels = unique(Param),
-         labels = c(expression(mu[Y]),expression(sigma[Y]), expression(" a "),
+         labels = c(expression(mu[Y]),expression(sigma[Y]), expression(" b "),
                     expression(p), expression(sigma[xi]),
                     expression(d),expression(sigma[r])))) %>% 
   # # add y min a y max by group
@@ -409,17 +402,11 @@ BetaParamSp <- SamplesSpSingle %>%
 
 
 ## 1.5.2.2 Other Parameters 
-OtherParams <- 
-  c("muY","sdY","a","p","sigma_time","drift","sigma_eps")
-#Get Indicies of correct Parameters
-Ind <- sapply(OtherParams, 
-              function(y){grep(paste0("\\<",y), #match beginning of word
-                               x = colnames(SamplesSpSingle))}) %>% unlist() %>% 
-  unique() 
-
 OtherParamPlotSp <- 
-  SamplesSpSingle %>% 
-  select(all_of(Ind)) %>% 
+  MCMCvis::MCMCchains(SamplesOwn_Sp_MA1, params = c("muY","sdY","b",
+                                                    "p","sigma_time",
+                                                    "drift","sigma_eps")) %>% 
+  data.frame() %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
   mutate("Type" = factor(rep(
     c(rep("Jump Intensity",2),rep("Shock Params",2),rep("Error RW",1),
@@ -429,7 +416,7 @@ OtherParamPlotSp <-
   mutate(Param = factor(Param,
                         levels = unique(Param),
                         labels = c(expression(mu[Y]),expression(sigma[Y]), 
-                                   expression(" a "),
+                                   expression(" b "),
                                    expression(p), expression(sigma[xi]),
                                    expression(" d "),expression(sigma[r])))) %>% 
   # # add y min a y max by group 
@@ -501,22 +488,30 @@ BetaParamPoland <- SamplesPlSingle %>%
         panel.grid.minor.x = element_blank())
 
 
-OtherParams <- 
-  c("muY","sdY","a","p","sigma_time","drift","sigma_eps")
-#Get Indicies of correct Parameters
-Ind <- sapply(OtherParams, 
-              function(y){grep(paste0("\\<",y), #match beginning of word
-                               x = colnames(SamplesPlSingle))}) %>% unlist() %>% 
-  unique() 
 
 OtherParamPlotPl <- 
-  SamplesPlSingle %>% 
-  select(all_of(Ind)) %>% 
+  MCMCvis::MCMCchains(SamplesOwn_Pl_MA1, params = c("muY","sdY","b",
+                                                    "p","sigma_time",
+                                                    "drift","sigma_eps")) %>% 
+  data.frame() %>% 
+  data.frame() %>% 
   pivot_longer(cols=1:ncol(.), names_to="Param", values_to = "Val") %>% 
   mutate("Type" = factor(rep(
-    c(rep("Jump Intensity",2),rep("Shock Params",1),rep("Error RW",1),rep("Drift",1),"Error Term"),
-    nrow(SamplesPlSingle)),
+    c(rep("Jump Intensity",2),rep("Shock Params",2),rep("Error RW",1),
+      rep("Drift",1),"Error Term"),
+    nrow(SamplesUSSingle)),
     levels=c("Jump Intensity","Shock Params","Error RW","Drift","Error Term"))) %>%
+  mutate(Param = factor(Param,
+                        levels = unique(Param),
+                        labels = c(expression(mu[Y]),expression(sigma[Y]), 
+                                   expression(" b "),
+                                   expression(p), expression(sigma[xi]),
+                                   expression(" d "),expression(sigma[r]))))  %>%
+  # # add y min a y max by group 
+  mutate("ymin"=rep(c(rep(0,2),rep(0,2),rep(0.2,1), rep(-0.4,1),rep(0.025,1)),
+                    nrow(SamplesUSSingle)),
+         "ymax"=rep(c(rep(3,2),rep(0.5,2),rep(0.45,1), rep(-0.1,1),rep(0.04,1)),
+                    nrow(SamplesUSSingle))) %>% 
   ggplot(aes(y = Val, x = Param, group = Type))+
   ggdist::stat_slabinterval(
     aes(y = Val,fill = Param, colour = after_stat(level), size = NULL),
@@ -542,9 +537,15 @@ OtherParamPlotPl <-
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank())
 
+## Add both together 
+cowplot::plot_grid(BetaParamPoland, OtherParamPlotPl, byrow = FALSE, nrow = 2,
+                   rel_heights = c(1.4,1)) #making first plot 1.4 times as high
+
 ### 2. Visualization UK WAR Forecasts  #########################################
 load(file = file.path(getwd(),"Data/UKWARData.RData")) # Load Data
-load(file.path(getwd(),"Big_results/Samples_UKWar_80.RData"))
+
+# #load results (file is too big to upload in github. must be calculated on its own)
+load(file.path(getwd(),"Big_results/Samples_UKWar_80.RData")) 
 
 #Total Samples
 pacman::p_load("MCMCvis","scoringRules","truncnorm")
